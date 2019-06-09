@@ -7,6 +7,7 @@ typedef struct curl_wrapper_t curl_wrapper_t;
 
 size_t write_callback(void *ptr, size_t size, size_t nmemb, void *userdata);
 size_t read_callback(void *ptr, size_t size, size_t nmemb, void *stream);
+void setopt(CURL *curl, int curlopt, const JanetKV* options, const char* optkey, JanetType type);
 
 struct write_data_t {
   char *memory;

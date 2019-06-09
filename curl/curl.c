@@ -78,106 +78,71 @@ static Janet easy_setopt(int32_t argc, Janet *argv) {
     const JanetKV* options = janet_getstruct(argv, 1);
 
     /* == BEHAVIOR OPTIONS == */
-
-    { // CURLOPT_VERBOSE
-      const Janet key = janet_ckeywordv("verbose");
-      const Janet val = janet_struct_get(options, key);
-      if (janet_checktype(val, JANET_BOOLEAN)) {
-        const int value = janet_unwrap_boolean(val);
-        CURLcode res = curl_easy_setopt(curl, CURLOPT_VERBOSE, value? 1L : 0L);
-        if (CURLE_OK != res) {
-          janet_panicf(curl_easy_strerror(res));
-        }
-      }
-    }
+    setopt(curl, CURLOPT_VERBOSE, options, "verbose", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_HEADER, options, "header", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_NOPROGRESS, options, "no-progress", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_NOSIGNAL, options, "no-signal", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_WILDCARDMATCH, options, "wildcard-match", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_URL, options, "url", JANET_STRING);
+    setopt(curl, CURLOPT_PORT, options, "port", JANET_NUMBER);
+    setopt(curl, CURLOPT_PROXY, options, "proxy", JANET_STRING);
+    setopt(curl, CURLOPT_USERPWD, options, "user-pass", JANET_STRING);
+    setopt(curl, CURLOPT_PROXYUSERPWD, options, "proxy-user-pass", JANET_STRING);
+    setopt(curl, CURLOPT_RANGE, options, "range", JANET_STRING);    
+    setopt(curl, CURLOPT_TIMEOUT, options, "timeout", JANET_NUMBER);    
+    setopt(curl, CURLOPT_INFILESIZE, options, "in-file-size", JANET_NUMBER);
+    setopt(curl, CURLOPT_POSTFIELDS, options, "post-fields", JANET_STRING);
+    setopt(curl, CURLOPT_REFERER, options, "referer", JANET_STRING);
+    setopt(curl, CURLOPT_FTPPORT, options, "ftp-port", JANET_NUMBER);
+    setopt(curl, CURLOPT_USERAGENT, options, "user-agent", JANET_STRING);
+    setopt(curl, CURLOPT_LOW_SPEED_LIMIT, options, "low-speed-limit", JANET_NUMBER);
+    setopt(curl, CURLOPT_LOW_SPEED_TIME, options, "low-speed-time", JANET_NUMBER);
+    setopt(curl, CURLOPT_RESUME_FROM, options, "resume-from", JANET_NUMBER);
+    setopt(curl, CURLOPT_COOKIE, options, "cookie", JANET_STRING);
+    setopt(curl, CURLOPT_SSLCERT, options, "ssl-cert", JANET_STRING);
+    setopt(curl, CURLOPT_KEYPASSWD, options, "key-pass", JANET_STRING);
+    setopt(curl, CURLOPT_CRLF, options, "crlf", JANET_NUMBER);
+    setopt(curl, CURLOPT_COOKIEFILE, options, "cookie-file", JANET_STRING);
+    setopt(curl, CURLOPT_SSLVERSION, options, "ssl-version", JANET_NUMBER);
+    setopt(curl, CURLOPT_TIMECONDITION, options, "time-condition", JANET_NUMBER);
+    setopt(curl, CURLOPT_TIMEVALUE, options, "time-value", JANET_NUMBER);
+    setopt(curl, CURLOPT_CUSTOMREQUEST, options, "custom-request", JANET_STRING);
+    setopt(curl, CURLOPT_NOBODY, options, "no-body", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_FAILONERROR, options, "fail-on-error", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_UPLOAD, options, "upload", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_DIRLISTONLY, options, "dir-list-only", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_APPEND, options, "append", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_FOLLOWLOCATION, options, "follow-location", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_TRANSFERTEXT, options, "transfer-text", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_PUT, options, "put", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_AUTOREFERER, options, "auto-referer", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_PROXYPORT, options, "proxy-port", JANET_NUMBER);
+    setopt(curl, CURLOPT_POSTFIELDSIZE, options, "post-field-size", JANET_NUMBER);
+    setopt(curl, CURLOPT_HTTPPROXYTUNNEL, options, "http-proxy-tunnel", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_INTERFACE, options, "interface", JANET_STRING);
+    setopt(curl, CURLOPT_KRBLEVEL, options, "krb-level", JANET_STRING);
+    setopt(curl, CURLOPT_SSL_VERIFYPEER, options, "ssl-verify-peer", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_CAINFO, options, "ca-info", JANET_STRING);
+    setopt(curl, CURLOPT_MAXREDIRS, options, "max-re-dirs", JANET_NUMBER);
+    setopt(curl, CURLOPT_FILETIME, options, "file-time", JANET_NUMBER);
+    setopt(curl, CURLOPT_MAXCONNECTS, options, "max-connects", JANET_NUMBER);
+    setopt(curl, CURLOPT_FRESH_CONNECT, options, "fresh-connect", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_FORBID_REUSE, options, "forbid-reuse", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_RANDOM_FILE, options, "random-file", JANET_STRING);
+    setopt(curl, CURLOPT_EGDSOCKET, options, "egd-socket", JANET_STRING);
+    setopt(curl, CURLOPT_CONNECTTIMEOUT, options, "connect-timeout", JANET_NUMBER);
+    setopt(curl, CURLOPT_HTTPGET, options, "http-get", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_SSL_VERIFYHOST, options, "ssl-verify-host", JANET_NUMBER); // is number :)
+    setopt(curl, CURLOPT_COOKIEJAR, options, "cookie-jar", JANET_STRING);
+    setopt(curl, CURLOPT_SSL_CIPHER_LIST, options, "ssl-cipher-list", JANET_STRING);
+    setopt(curl, CURLOPT_HTTP_VERSION, options, "http-version", JANET_NUMBER);
+    setopt(curl, CURLOPT_FTP_USE_EPSV, options, "ftp-use-epsv", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_SSLCERTTYPE, options, "ssl-cert-type", JANET_STRING);
+    setopt(curl, CURLOPT_SSLKEY, options, "ssl-key", JANET_STRING);
+    setopt(curl, CURLOPT_SSLKEYTYPE, options, "ssl-key-type", JANET_STRING);
+    setopt(curl, CURLOPT_SSLENGINE, options, "ssl-engine", JANET_STRING);
+    setopt(curl, CURLOPT_SSLENGINE_DEFAULT, options, "ssl-engine_default", JANET_BOOLEAN);
     
-    { // CURLOPT_HEADER
-      const Janet key = janet_ckeywordv("header");
-      const Janet val = janet_struct_get(options, key);
-      if (janet_checktype(val, JANET_BOOLEAN)) {
-        const int value = janet_unwrap_boolean(val);
-        CURLcode res = curl_easy_setopt(curl, CURLOPT_HEADER, value? 1L : 0L);
-        if (CURLE_OK != res) {
-          janet_panicf(curl_easy_strerror(res));
-        }
-      }
-    }
-
-    { // CURLOPT_NOPROGRESS
-      const Janet key = janet_ckeywordv("no-progress");
-      const Janet val = janet_struct_get(options, key);
-      if (janet_checktype(val, JANET_BOOLEAN)) {
-        const int value = janet_unwrap_boolean(val);
-        CURLcode res = curl_easy_setopt(curl, CURLOPT_NOPROGRESS, value? 1L : 0L);
-        if (CURLE_OK != res) {
-          janet_panicf(curl_easy_strerror(res));
-        }
-      }
-    }
-
-    { // CURLOPT_NOSIGNAL
-      const Janet key = janet_ckeywordv("no-signal");
-      const Janet val = janet_struct_get(options, key);
-      if (janet_checktype(val, JANET_BOOLEAN)) {
-        const int value = janet_unwrap_boolean(val);
-        CURLcode res = curl_easy_setopt(curl, CURLOPT_NOSIGNAL, value? 1L : 0L);
-        if (CURLE_OK != res) {
-          janet_panicf(curl_easy_strerror(res));
-        }
-      }
-    }
-
-    { // CURLOPT_WILDCARDMATCH
-      const Janet key = janet_ckeywordv("wildcard-match");
-      const Janet val = janet_struct_get(options, key);
-      if (janet_checktype(val, JANET_BOOLEAN)) {
-        const int value = janet_unwrap_boolean(val);
-        CURLcode res = curl_easy_setopt(curl, CURLOPT_WILDCARDMATCH, value? 1L : 0L);
-        if (CURLE_OK != res) {
-          janet_panicf(curl_easy_strerror(res));
-        }
-      }
-    }
-
-    /* == CALLBACK OPTIONS == */
-
-    { // CURLOPT_WRITEFUNCTION
-      const Janet key = janet_ckeywordv("write-function");
-      const Janet val = janet_struct_get(options, key);
-      if (janet_checktype(val, JANET_FUNCTION)) {
-        const JanetFunction *value = janet_unwrap_function(val);
-        CURLcode res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, value);
-        if (CURLE_OK != res) {
-          janet_panicf(curl_easy_strerror(res));
-        }
-      }
-    }
-
-    /* == XXX == */
-  
-    { // CURLOPT_URL
-      const Janet key = janet_ckeywordv("url");
-      const Janet val = janet_struct_get(options, key);
-      if (janet_checktype(val, JANET_STRING)) {
-        const uint8_t *value = janet_unwrap_string(val);
-        CURLcode res = curl_easy_setopt(curl, CURLOPT_URL, (char*)value);
-        if (CURLE_OK != res) {
-          janet_panicf(curl_easy_strerror(res));
-        }
-      }
-    }
-
-    { // CURLOPT_TIMEOUT
-      const Janet key = janet_ckeywordv("timeout");
-      const Janet val = janet_struct_get(options, key);
-      if (janet_checktype(val, JANET_NUMBER)) {
-        const int32_t value = janet_unwrap_integer(val);
-        CURLcode res = curl_easy_setopt(curl, CURLOPT_TIMEOUT, value);
-        if (CURLE_OK != res) {
-          janet_panicf(curl_easy_strerror(res));
-        }
-      }  
-    }
   }
 
   return janet_wrap_nil();
