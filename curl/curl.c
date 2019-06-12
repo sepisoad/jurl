@@ -77,36 +77,12 @@ static Janet easy_setopt(int32_t argc, Janet *argv) {
   if (argc == 2) {
     const JanetKV* options = janet_getstruct(argv, 1);
 
-    /* == BEHAVIOR OPTIONS == */
+    /* == JANET_BOOLEAN == */    
     setopt(curl, CURLOPT_VERBOSE, options, "verbose", JANET_BOOLEAN);
     setopt(curl, CURLOPT_HEADER, options, "header", JANET_BOOLEAN);
     setopt(curl, CURLOPT_NOPROGRESS, options, "no-progress", JANET_BOOLEAN);
     setopt(curl, CURLOPT_NOSIGNAL, options, "no-signal", JANET_BOOLEAN);
     setopt(curl, CURLOPT_WILDCARDMATCH, options, "wildcard-match", JANET_BOOLEAN);
-    setopt(curl, CURLOPT_URL, options, "url", JANET_STRING);
-    setopt(curl, CURLOPT_PORT, options, "port", JANET_NUMBER);
-    setopt(curl, CURLOPT_PROXY, options, "proxy", JANET_STRING);
-    setopt(curl, CURLOPT_USERPWD, options, "user-pass", JANET_STRING);
-    setopt(curl, CURLOPT_PROXYUSERPWD, options, "proxy-user-pass", JANET_STRING);
-    setopt(curl, CURLOPT_RANGE, options, "range", JANET_STRING);    
-    setopt(curl, CURLOPT_TIMEOUT, options, "timeout", JANET_NUMBER);    
-    setopt(curl, CURLOPT_INFILESIZE, options, "in-file-size", JANET_NUMBER);
-    setopt(curl, CURLOPT_POSTFIELDS, options, "post-fields", JANET_STRING);
-    setopt(curl, CURLOPT_REFERER, options, "referer", JANET_STRING);
-    setopt(curl, CURLOPT_FTPPORT, options, "ftp-port", JANET_NUMBER);
-    setopt(curl, CURLOPT_USERAGENT, options, "user-agent", JANET_STRING);
-    setopt(curl, CURLOPT_LOW_SPEED_LIMIT, options, "low-speed-limit", JANET_NUMBER);
-    setopt(curl, CURLOPT_LOW_SPEED_TIME, options, "low-speed-time", JANET_NUMBER);
-    setopt(curl, CURLOPT_RESUME_FROM, options, "resume-from", JANET_NUMBER);
-    setopt(curl, CURLOPT_COOKIE, options, "cookie", JANET_STRING);
-    setopt(curl, CURLOPT_SSLCERT, options, "ssl-cert", JANET_STRING);
-    setopt(curl, CURLOPT_KEYPASSWD, options, "key-pass", JANET_STRING);
-    setopt(curl, CURLOPT_CRLF, options, "crlf", JANET_NUMBER);
-    setopt(curl, CURLOPT_COOKIEFILE, options, "cookie-file", JANET_STRING);
-    setopt(curl, CURLOPT_SSLVERSION, options, "ssl-version", JANET_NUMBER);
-    setopt(curl, CURLOPT_TIMECONDITION, options, "time-condition", JANET_NUMBER);
-    setopt(curl, CURLOPT_TIMEVALUE, options, "time-value", JANET_NUMBER);
-    setopt(curl, CURLOPT_CUSTOMREQUEST, options, "custom-request", JANET_STRING);
     setopt(curl, CURLOPT_NOBODY, options, "no-body", JANET_BOOLEAN);
     setopt(curl, CURLOPT_FAILONERROR, options, "fail-on-error", JANET_BOOLEAN);
     setopt(curl, CURLOPT_UPLOAD, options, "upload", JANET_BOOLEAN);
@@ -116,32 +92,89 @@ static Janet easy_setopt(int32_t argc, Janet *argv) {
     setopt(curl, CURLOPT_TRANSFERTEXT, options, "transfer-text", JANET_BOOLEAN);
     setopt(curl, CURLOPT_PUT, options, "put", JANET_BOOLEAN);
     setopt(curl, CURLOPT_AUTOREFERER, options, "auto-referer", JANET_BOOLEAN);
-    setopt(curl, CURLOPT_PROXYPORT, options, "proxy-port", JANET_NUMBER);
-    setopt(curl, CURLOPT_POSTFIELDSIZE, options, "post-field-size", JANET_NUMBER);
     setopt(curl, CURLOPT_HTTPPROXYTUNNEL, options, "http-proxy-tunnel", JANET_BOOLEAN);
-    setopt(curl, CURLOPT_INTERFACE, options, "interface", JANET_STRING);
-    setopt(curl, CURLOPT_KRBLEVEL, options, "krb-level", JANET_STRING);
     setopt(curl, CURLOPT_SSL_VERIFYPEER, options, "ssl-verify-peer", JANET_BOOLEAN);
-    setopt(curl, CURLOPT_CAINFO, options, "ca-info", JANET_STRING);
-    setopt(curl, CURLOPT_MAXREDIRS, options, "max-re-dirs", JANET_NUMBER);
-    setopt(curl, CURLOPT_FILETIME, options, "file-time", JANET_NUMBER);
-    setopt(curl, CURLOPT_MAXCONNECTS, options, "max-connects", JANET_NUMBER);
     setopt(curl, CURLOPT_FRESH_CONNECT, options, "fresh-connect", JANET_BOOLEAN);
     setopt(curl, CURLOPT_FORBID_REUSE, options, "forbid-reuse", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_HTTPGET, options, "http-get", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_FTP_USE_EPSV, options, "ftp-use-epsv", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_SSLENGINE_DEFAULT, options, "ssl-engine_default", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_DNS_USE_GLOBAL_CACHE, options, "dns-use-global-cache", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_DNS_USE_GLOBAL_CACHE, options, "dns-use-global-cache", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_COOKIESESSION, options, "cookie-session", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_UNRESTRICTED_AUTH, options, "unrestricted-auth", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_FTP_USE_EPRT, options, "ftp-use-eprt", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_TCP_NODELAY, options, "tcp-no-delay", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_IGNORE_CONTENT_LENGTH, options, "ignore-content-length", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_FTP_SKIP_PASV_IP, options, "ftp-skip-pasv-ip", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_CONNECT_ONLY, options, "connect-only", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_SSL_SESSIONID_CACHE, options, "ssl-session-id-cache", JANET_BOOLEAN);
+    /* == JANET_STRING == */
+    setopt(curl, CURLOPT_URL, options, "url", JANET_STRING);
+    setopt(curl, CURLOPT_PROXY, options, "proxy", JANET_STRING);
+    setopt(curl, CURLOPT_USERPWD, options, "user-pass", JANET_STRING);
+    setopt(curl, CURLOPT_PROXYUSERPWD, options, "proxy-user-pass", JANET_STRING);
+    setopt(curl, CURLOPT_RANGE, options, "range", JANET_STRING);    
+    setopt(curl, CURLOPT_POSTFIELDS, options, "post-fields", JANET_STRING);
+    setopt(curl, CURLOPT_REFERER, options, "referer", JANET_STRING);
+    setopt(curl, CURLOPT_USERAGENT, options, "user-agent", JANET_STRING);
+    setopt(curl, CURLOPT_COOKIE, options, "cookie", JANET_STRING);
+    setopt(curl, CURLOPT_SSLCERT, options, "ssl-cert", JANET_STRING);
+    setopt(curl, CURLOPT_KEYPASSWD, options, "key-pass", JANET_STRING);
+    setopt(curl, CURLOPT_COOKIEFILE, options, "cookie-file", JANET_STRING);
+    setopt(curl, CURLOPT_CUSTOMREQUEST, options, "custom-request", JANET_STRING);
+    setopt(curl, CURLOPT_INTERFACE, options, "interface", JANET_STRING);
+    setopt(curl, CURLOPT_KRBLEVEL, options, "krb-level", JANET_STRING);
+    setopt(curl, CURLOPT_CAINFO, options, "ca-info", JANET_STRING);
     setopt(curl, CURLOPT_RANDOM_FILE, options, "random-file", JANET_STRING);
     setopt(curl, CURLOPT_EGDSOCKET, options, "egd-socket", JANET_STRING);
-    setopt(curl, CURLOPT_CONNECTTIMEOUT, options, "connect-timeout", JANET_NUMBER);
-    setopt(curl, CURLOPT_HTTPGET, options, "http-get", JANET_BOOLEAN);
-    setopt(curl, CURLOPT_SSL_VERIFYHOST, options, "ssl-verify-host", JANET_NUMBER); // is number :)
     setopt(curl, CURLOPT_COOKIEJAR, options, "cookie-jar", JANET_STRING);
     setopt(curl, CURLOPT_SSL_CIPHER_LIST, options, "ssl-cipher-list", JANET_STRING);
-    setopt(curl, CURLOPT_HTTP_VERSION, options, "http-version", JANET_NUMBER);
-    setopt(curl, CURLOPT_FTP_USE_EPSV, options, "ftp-use-epsv", JANET_BOOLEAN);
     setopt(curl, CURLOPT_SSLCERTTYPE, options, "ssl-cert-type", JANET_STRING);
     setopt(curl, CURLOPT_SSLKEY, options, "ssl-key", JANET_STRING);
     setopt(curl, CURLOPT_SSLKEYTYPE, options, "ssl-key-type", JANET_STRING);
     setopt(curl, CURLOPT_SSLENGINE, options, "ssl-engine", JANET_STRING);
-    setopt(curl, CURLOPT_SSLENGINE_DEFAULT, options, "ssl-engine_default", JANET_BOOLEAN);
+    setopt(curl, CURLOPT_CAPATH, options, "ca-path", JANET_STRING);
+    setopt(curl, CURLOPT_ACCEPT_ENCODING, options, "accept-encoding", JANET_STRING);
+    setopt(curl, CURLOPT_NETRC_FILE, options, "netrc-file", JANET_STRING);
+    setopt(curl, CURLOPT_FTP_ACCOUNT, options, "ftp-account", JANET_STRING);
+    setopt(curl, CURLOPT_COOKIELIST, options, "cookie-list", JANET_STRING);
+    setopt(curl, CURLOPT_FTP_ALTERNATIVE_TO_USER, options, "ftp-alternative-to-user", JANET_STRING);
+    setopt(curl, CURLOPT_SSH_PUBLIC_KEYFILE, options, "ssh-public-key-file", JANET_STRING);
+    setopt(curl, CURLOPT_SSH_PRIVATE_KEYFILE, options, "ssh-private-key-file", JANET_STRING);
+    setopt(curl, CURLOPT_FTP_RESPONSE_TIMEOUT, options, "ftp-response-timeout", JANET_STRING);
+    setopt(curl, CURLOPT_MAXFILESIZE, options, "maxfilesize", JANET_STRING);
+    setopt(curl, CURLOPT_INFILESIZE_LARGE, options, "infilesize-large", JANET_STRING);
+    setopt(curl, CURLOPT_RESUME_FROM_LARGE, options, "resume-from-large", JANET_STRING);
+    setopt(curl, CURLOPT_MAXFILESIZE_LARGE, options, "maxfilesize-large", JANET_STRING);
+    setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, options, "postfieldsize-large", JANET_STRING);
+    setopt(curl, CURLOPT_LOCALPORT, options, "localport", JANET_STRING);
+    setopt(curl, CURLOPT_LOCALPORTRANGE, options, "localportrange", JANET_STRING);
+    setopt(curl, CURLOPT_MAX_SEND_SPEED_LARGE, options, "max-send-speed-large", JANET_STRING);
+    setopt(curl, CURLOPT_MAX_RECV_SPEED_LARGE, options, "max-recv-speed-large", JANET_STRING);
+    /* == JANET_NUMBER == */
+    setopt(curl, CURLOPT_PORT, options, "port", JANET_NUMBER);
+    setopt(curl, CURLOPT_TIMEOUT, options, "timeout", JANET_NUMBER);    
+    setopt(curl, CURLOPT_INFILESIZE, options, "in-file-size", JANET_NUMBER);
+    setopt(curl, CURLOPT_FTPPORT, options, "ftp-port", JANET_NUMBER);
+    setopt(curl, CURLOPT_LOW_SPEED_LIMIT, options, "low-speed-limit", JANET_NUMBER);
+    setopt(curl, CURLOPT_LOW_SPEED_TIME, options, "low-speed-time", JANET_NUMBER);
+    setopt(curl, CURLOPT_RESUME_FROM, options, "resume-from", JANET_NUMBER);
+    setopt(curl, CURLOPT_CRLF, options, "crlf", JANET_NUMBER);
+    setopt(curl, CURLOPT_SSLVERSION, options, "ssl-version", JANET_NUMBER);
+    setopt(curl, CURLOPT_TIMECONDITION, options, "time-condition", JANET_NUMBER);
+    setopt(curl, CURLOPT_TIMEVALUE, options, "time-value", JANET_NUMBER);
+    setopt(curl, CURLOPT_PROXYPORT, options, "proxy-port", JANET_NUMBER);
+    setopt(curl, CURLOPT_POSTFIELDSIZE, options, "post-field-size", JANET_NUMBER);
+    setopt(curl, CURLOPT_MAXREDIRS, options, "max-re-dirs", JANET_NUMBER);
+    setopt(curl, CURLOPT_FILETIME, options, "file-time", JANET_NUMBER);
+    setopt(curl, CURLOPT_MAXCONNECTS, options, "max-connects", JANET_NUMBER);
+    setopt(curl, CURLOPT_CONNECTTIMEOUT, options, "connect-timeout", JANET_NUMBER);
+    setopt(curl, CURLOPT_SSL_VERIFYHOST, options, "ssl-verify-host", JANET_NUMBER); // is number :)
+    setopt(curl, CURLOPT_HTTP_VERSION, options, "http-version", JANET_NUMBER);
+    setopt(curl, CURLOPT_DNS_CACHE_TIMEOUT, options, "dns-cache-timeout", JANET_NUMBER);
+    setopt(curl, CURLOPT_BUFFERSIZE, options, "buffersize", JANET_NUMBER);
+    /* == JANET_XXX == */
     
   }
 
