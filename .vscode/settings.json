@@ -1,0 +1,8 @@
+{
+  "files.associations": {
+    "curl.h": "c",
+    "lcurl.h": "c",
+    "curlver.h": "c",
+    "system.h": "c"
+  }
+}

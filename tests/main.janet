@@ -1,23 +1,13 @@
-(import ../curl/build/curl :as curl)
+(import ../src/build/curl :as curl)
 
-(let [curl (curl/easy-init)]
-  (curl/easy-setopt curl {
-    :verbose true
-    :header false
-    :no-progress true
-    :no-signal false
-    :wildcard-match true
-    # ======
-    :port 443
-    #:proxy "socks5://127.0.0.1:1987"
-    :userpwd "user:pass"
-    :url "https://sepisoad.com"
-    # ======
-    :timeout 15})
-
-  (let [res (curl/easy-perform curl)]
-    (if (not (false? res))
-      (do
-        (print (res :buffer))
-        (print (res :size)))))
-  (curl/easy-cleanup curl))
+(print curl/version)
+(let [curl (curl/easy/init)]
+  (print (curl/easy/escape curl "https://janet-lang.org"))
+  (print (curl/easy/unescape curl
+    (curl/easy/escape curl "https://janet-lang.org")))
+  (print (curl/easy/strerror 10))
+  (curl/easy/setopt curl 
+    :url "ssssss" 
+    :timeout 4554
+    :can true)
+  (curl/easy/cleanup curl))
