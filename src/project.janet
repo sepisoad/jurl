@@ -9,5 +9,5 @@
 
 (declare-native
   :name "curl"
-  :lflags @["-lcurl" "-ljanet" "-shared" "-rdynamic"]
-  :source @["base.c" "opts.c" "curl.c" "easy.c"])
+  :lflags @["-lcurl" "-ljanet" "-shared" "-rdynamic" "-g"]
+  :source @["base.c" "funcs.c" "opts.c" "curl.c" "easy.c"])

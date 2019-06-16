@@ -12,6 +12,11 @@ struct curlw
 // typedefs
 typedef struct curlw curlw_t;
 
+// callbacks
+size_t funcs_write(void *buff, size_t size, size_t count, void *udata);
+size_t funcs_read(char *buff, size_t size, size_t count, void *udata);
+int funcs_progress(void *udata, double dlt, double dln, double ult, double uln);
+
 // opts
 void opts_gen_dict(void);
 const JanetKV* opts_get(Janet* key);
