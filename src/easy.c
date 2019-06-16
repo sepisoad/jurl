@@ -38,6 +38,25 @@ static Janet easy_cleanup(int32_t argc, Janet *argv) {
  * @param argv 
  * @return Janet 
  */
+static Janet easy_duphandle(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 1);
+
+  CURL* curl = curlw_get_curl_arg(argv);
+  CURL* clone = curl_easy_duphandle(curl);
+  if (NULL == clone) {
+    return janet_wrap_nil();
+  }
+
+  return janet_wrap_pointer(clone);
+}
+
+/**
+ * @brief 
+ * 
+ * @param argc 
+ * @param argv 
+ * @return Janet 
+ */
 static Janet easy_escape(int32_t argc, Janet *argv) {
   janet_fixarity(argc, 2);
 
@@ -252,6 +271,11 @@ static const JanetReg cfuns[] = {
       "(def curl (easy/init)) \n\n"
       "create a new curl handler"
     },
+    {
+      "easy/duphandle", easy_duphandle,
+      "(easy/duphandle curl) \n\n"
+      "clones a libcurl session handle"
+    },    
     {
       "easy/cleanup", easy_cleanup,
       "(easy/cleanup curl) \n\n"

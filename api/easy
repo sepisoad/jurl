@@ -1,14 +1,14 @@
-[?] => curl_easy_duphandle ?=> maybe we can use janet syntax this!
-[?] => curl_easy_getinfo ?=> I am not sure if this is a useful function
 [x] => curl_easy_init
 [x] => curl_easy_cleanup
+[x] => curl_easy_duphandle
 [x] => curl_easy_escape
 [x] => curl_easy_unescape
 [x] => curl_easy_strerror
-[~] => curl_easy_setopt
 [x] => curl_easy_pause
 [x] => curl_easy_reset
 [x] => curl_easy_upkeep
 [x] => curl_easy_recv
 [x] => curl_easy_send
-[] => curl_easy_perform
+[x] => curl_easy_perform
+[~] => curl_easy_setopt
+[?] => curl_easy_getinfo => DO IT AFTER YOU HAVE COVERED ALL OPTS/OPT TYPES
