@@ -5,10 +5,10 @@
 [x] => curl_easy_escape
 [x] => curl_easy_unescape
 [x] => curl_easy_strerror
-[x] => curl_easy_setopt
-[] => curl_easy_pause
+[~] => curl_easy_setopt
+[x] => curl_easy_pause
+[x] => curl_easy_reset
+[x] => curl_easy_upkeep
+[x] => curl_easy_recv
+[x] => curl_easy_send
 [] => curl_easy_perform
-[] => curl_easy_recv
-[] => curl_easy_reset
-[] => curl_easy_send
-[] => curl_easy_upkeep

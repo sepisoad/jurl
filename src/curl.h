@@ -15,7 +15,7 @@ typedef struct curlw curlw_t;
 // opts
 void opts_gen_dict(void);
 const JanetKV* opts_get(Janet* key);
-int opts_set(CURL* curl, Janet* key, Janet* val);
+void opts_set(CURL* curl, Janet* key, Janet* val);
 
 // base module
 curlw_t* curlw_init();

@@ -2,12 +2,9 @@
 
 (print curl/version)
 (let [curl (curl/easy/init)]
-  (print (curl/easy/escape curl "https://janet-lang.org"))
-  (print (curl/easy/unescape curl
-    (curl/easy/escape curl "https://janet-lang.org")))
-  (print (curl/easy/strerror 10))
   (curl/easy/setopt curl 
-    :url "ssssss" 
-    :timeout 4554
-    :can true)
+    :url "https://janet-lang.org"
+    :verbose? true
+    :timeout 10)  
+  (curl/easy/perform curl)
   (curl/easy/cleanup curl))
