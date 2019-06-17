@@ -3,4 +3,4 @@
 [janet](https://janet-lang.org/) wrapper around libcurl
 
 ## WIP
-is it not ready yet for production ;)
+is it not yet ready for production ;)
