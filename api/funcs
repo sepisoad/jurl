@@ -10,8 +10,13 @@
 [x] => curl_easy_recv
 [x] => curl_easy_send
 [x] => curl_easy_perform
-[x] => curl_easy_setopt
-[?] => curl_easy_getinfo => DO IT AFTER YOU HAVE COVERED ALL OPTS/OPT TYPES
+[~] => curl_easy_setopt
+[~] => curl_easy_getinfo
+
+[x] => curl_share_cleanup 
+[x] => curl_share_init 
+[~] => curl_share_setopt => i need to learn more about this function, do we really need 'share' at all
+[x] => curl_share_strerror 
 
 [x] => curl_url
 [x] => curl_url_cleanup
@@ -52,11 +57,6 @@
 
 [ ] => curl_pushheader_byname 
 [ ] => curl_pushheader_bynum 
-
-[ ] => curl_share_cleanup 
-[ ] => curl_share_init 
-[ ] => curl_share_setopt 
-[ ] => curl_share_strerror 
 
 [ ] => curl_slist_append 
 [ ] => curl_slist_free_all 

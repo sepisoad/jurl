@@ -23,7 +23,9 @@
 //==============================================================================
 
 typedef struct MapCurlOptionToJanetType MapCurlOptionToJanetType;
+typedef struct MapCurlInfoToJanetType MapCurlInfoToJanetType;
 typedef struct Curl Curl;
+typedef struct Curlsh Curlsh;
 typedef struct Url Url;
 
 struct MapCurlOptionToJanetType {
@@ -31,8 +33,17 @@ struct MapCurlOptionToJanetType {
   JanetType type;
 };
 
+struct MapCurlInfoToJanetType {
+  int info;
+  JanetType type;
+};
+
 struct Curl {
   CURL* curl;
+};
+
+struct Curlsh {
+  CURLSH* curlsh;
 };
 
 struct Url{
@@ -50,7 +61,6 @@ struct Url{
 
 static int curl_gc_fn (void *data, size_t len);
 static Janet curl_get_fn (void *data, Janet key);
-
 static Janet easy_init(int32_t argc, Janet *argv);
 static Janet easy_clone(int32_t argc, Janet *argv);
 static Janet easy_escape(int32_t argc, Janet *argv);
@@ -63,10 +73,16 @@ static Janet easy_upkeep(int32_t argc, Janet *argv);
 static Janet easy_recv(int32_t argc, Janet *argv);
 static Janet easy_send(int32_t argc, Janet *argv);
 static Janet easy_perform(int32_t argc, Janet *argv);
+static Janet easy_query(int32_t argc, Janet *argv);
+
+static int curlsh_gc_fn (void *data, size_t len);
+static Janet curlsh_get_fn (void *data, Janet key);
+static Janet share_init(int32_t argc, Janet *argv);
+static Janet share_setopt(int32_t argc, Janet *argv);
+static Janet share_strerror(int32_t argc, Janet *argv);
 
 static int url_gc_fn (void *data, size_t len);
 static Janet url_get_fn (void *data, Janet key);
-
 static Janet url_init(int32_t argc, Janet *argv);
 
 //==============================================================================
@@ -81,7 +97,11 @@ static Janet url_init(int32_t argc, Janet *argv);
 KHASH_MAP_INIT_STR(HashMapCurlOptionToJanetType, MapCurlOptionToJanetType*);
 khash_t(HashMapCurlOptionToJanetType) *hashmap_opt_to_type = NULL;
 
+KHASH_MAP_INIT_STR(HashMapCurlInfoToJanetType, MapCurlInfoToJanetType*);
+khash_t(HashMapCurlInfoToJanetType) *hashmap_info_to_type = NULL;
+
 JanetAbstractType curl_obj = {"curl", curl_gc_fn, NULL, curl_get_fn, NULL, NULL, NULL, NULL};
+JanetAbstractType curlsh_obj = {"curlsh", curlsh_gc_fn, NULL, curlsh_get_fn, NULL, NULL, NULL, NULL};
 JanetAbstractType url_obj = {"url", url_gc_fn, NULL, url_get_fn, NULL, NULL, NULL, NULL};
 
 static JanetMethod curl_methods[] = {  
@@ -95,6 +115,12 @@ static JanetMethod curl_methods[] = {
   {"recv", easy_recv},
   {"send", easy_send},
   {"perform", easy_perform},
+  {"query", easy_query},
+  {NULL, NULL}
+};
+
+static JanetMethod curlsh_methods[] = {    
+  {"setopt", easy_setopt},  
   {NULL, NULL}
 };
 
@@ -132,6 +158,29 @@ static Janet curl_get_fn (void *data, Janet key) {
   if (!janet_checktype(key, JANET_KEYWORD))
     janet_panicf("expected keyword, got %v", key);
   return janet_getmethod(janet_unwrap_keyword(key), curl_methods);
+}
+
+static Janet curlsh_make(CURLSH *curlsh) {
+  Curlsh* c = (Curlsh*) janet_abstract(&curl_obj, sizeof(Curlsh));
+  c->curlsh = curlsh;
+  return janet_wrap_abstract(c);
+}
+
+static int curlsh_gc_fn (void *data, size_t len) {
+  (void) len;
+
+  Curlsh* c = (Curlsh*)data;  
+  curl_share_cleanup(c->curlsh);
+
+  return 0;
+}
+
+static Janet curlsh_get_fn (void *data, Janet key) {
+  (void) data;
+
+  if (!janet_checktype(key, JANET_KEYWORD))
+    janet_panicf("expected keyword, got %v", key);
+  return janet_getmethod(janet_unwrap_keyword(key), curlsh_methods);
 }
 
 static Janet url_make(CURLU* url) {
@@ -225,9 +274,9 @@ static int funcs_progress(void *udata, double dltotal, double dlnow, double ulto
 //==============================================================================
 
 static struct  {
-  char name[128];
+  char name[64];
   MapCurlOptionToJanetType kjm;  
-} _key_opt_type_arr[] = {  
+} _key_option_type_arr[] = {  
   {"url", {CURLOPT_URL, JANET_STRING}},
   {"proxy", {CURLOPT_PROXY, JANET_STRING}},
   {"user-password", {CURLOPT_USERPWD, JANET_STRING}},
@@ -506,8 +555,8 @@ static struct  {
   {"trailer-data@TODO", {CURLOPT_TRAILERDATA, JANET_POINTER}}, // TODO
 };
 
-static void opts_gen_dict(void) {
-  int32_t size = sizeof(_key_opt_type_arr) / sizeof(_key_opt_type_arr[0]);  
+static void options_gen_dict(void) {
+  int32_t size = sizeof(_key_option_type_arr) / sizeof(_key_option_type_arr[0]);  
 
   if (NULL == hashmap_opt_to_type) {
     hashmap_opt_to_type = kh_init(HashMapCurlOptionToJanetType);
@@ -516,21 +565,21 @@ static void opts_gen_dict(void) {
   int absent;
   khint_t where;
   for (int32_t idx = 0; idx < size; idx++){    
-    where = kh_put(HashMapCurlOptionToJanetType, hashmap_opt_to_type, _key_opt_type_arr[idx].name, &absent);
-    kh_value(hashmap_opt_to_type, where) = &_key_opt_type_arr[idx].kjm;
+    where = kh_put(HashMapCurlOptionToJanetType, hashmap_opt_to_type, _key_option_type_arr[idx].name, &absent);
+    kh_value(hashmap_opt_to_type, where) = &_key_option_type_arr[idx].kjm;
   }
 }
 
-static const MapCurlOptionToJanetType* opts_get(const char* key) {
+static const MapCurlOptionToJanetType* options_get(const char* key) {
   MapCurlOptionToJanetType* val;
   khint_t where = kh_get(HashMapCurlOptionToJanetType, hashmap_opt_to_type, key);
   val = kh_val(hashmap_opt_to_type, where);
   return val;  
 }
 
-static void opts_set(CURL* curl, Janet* key, Janet* val) {    
+static void options_set(CURL* curl, Janet* key, Janet* val) {    
   const char* keyword = (const char*) janet_unwrap_keyword(*key);
-  const MapCurlOptionToJanetType* map = opts_get(keyword);
+  const MapCurlOptionToJanetType* map = options_get(keyword);
   if (NULL == map) {
     janet_panic("invalid keyword");
   }
@@ -572,6 +621,140 @@ static void opts_set(CURL* curl, Janet* key, Janet* val) {
       janet_panic("value type is not supported");
       break;
   };
+}
+
+//==============================================================================
+// ██╗███╗   ██╗███████╗ ██████╗ 
+// ██║████╗  ██║██╔════╝██╔═══██╗
+// ██║██╔██╗ ██║█████╗  ██║   ██║
+// ██║██║╚██╗██║██╔══╝  ██║   ██║
+// ██║██║ ╚████║██║     ╚██████╔╝
+// ╚═╝╚═╝  ╚═══╝╚═╝      ╚═════╝ 
+//==============================================================================
+
+static struct  {
+  char name[64];
+  MapCurlInfoToJanetType ijm;  
+} _key_info_type_arr[] = {    
+  {"query-effective-url", {CURLINFO_EFFECTIVE_URL, JANET_STRING}},
+  {"query-content-type", {CURLINFO_CONTENT_TYPE, JANET_STRING}},
+  {"query-private", {CURLINFO_PRIVATE, JANET_STRING}},
+  {"query-ftp-entry-path", {CURLINFO_FTP_ENTRY_PATH, JANET_STRING}},
+  {"query-redirect-url", {CURLINFO_REDIRECT_URL, JANET_STRING}},
+  {"query-primary-ip", {CURLINFO_PRIMARY_IP, JANET_STRING}},
+  {"query-rtsp-session-id", {CURLINFO_RTSP_SESSION_ID, JANET_STRING}},
+  {"query-local-ip", {CURLINFO_LOCAL_IP, JANET_STRING}},
+  {"query-scheme", {CURLINFO_SCHEME, JANET_STRING}},
+
+  {"query-response-code", {CURLINFO_RESPONSE_CODE, JANET_NUMBER}},
+  {"query-total-time", {CURLINFO_TOTAL_TIME, JANET_NUMBER}},
+  {"query-name-lookup-time", {CURLINFO_NAMELOOKUP_TIME, JANET_NUMBER}},
+  {"query-connect-time", {CURLINFO_CONNECT_TIME, JANET_NUMBER}},
+  {"query-pre-transfer-time", {CURLINFO_PRETRANSFER_TIME, JANET_NUMBER}},
+  {"query-size-upload", {CURLINFO_SIZE_UPLOAD, JANET_NUMBER}},
+  {"query-size-upload-t", {CURLINFO_SIZE_UPLOAD_T, JANET_NUMBER}},
+  {"query-size-download", {CURLINFO_SIZE_DOWNLOAD, JANET_NUMBER}},
+  {"query-size-download-t", {CURLINFO_SIZE_DOWNLOAD_T, JANET_NUMBER}},
+  {"query-speed-download", {CURLINFO_SPEED_DOWNLOAD, JANET_NUMBER}},
+  {"query-speed-download-t", {CURLINFO_SPEED_DOWNLOAD_T, JANET_NUMBER}},
+  {"query-speed-upload", {CURLINFO_SPEED_UPLOAD, JANET_NUMBER}},
+  {"query-speed-upload-t", {CURLINFO_SPEED_UPLOAD_T, JANET_NUMBER}},
+  {"query-header-size", {CURLINFO_HEADER_SIZE, JANET_NUMBER}},
+  {"query-request-size", {CURLINFO_REQUEST_SIZE, JANET_NUMBER}},
+  {"query-ssl-verify-result", {CURLINFO_SSL_VERIFYRESULT, JANET_NUMBER}},
+  {"query-file-time", {CURLINFO_FILETIME, JANET_NUMBER}},
+  {"query-file-time-t", {CURLINFO_FILETIME_T, JANET_NUMBER}},
+  {"query-content-length-download", {CURLINFO_CONTENT_LENGTH_DOWNLOAD, JANET_NUMBER}},
+  {"query-content-length-download-t", {CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, JANET_NUMBER}},
+  {"query-content-length-upload", {CURLINFO_CONTENT_LENGTH_UPLOAD, JANET_NUMBER}},
+  {"query-content-length-upload-t", {CURLINFO_CONTENT_LENGTH_UPLOAD_T, JANET_NUMBER}},
+  {"query-start-transfer-time", {CURLINFO_STARTTRANSFER_TIME, JANET_NUMBER}},
+  {"query-redirect-time", {CURLINFO_REDIRECT_TIME, JANET_NUMBER}},
+  {"query-redirect-count", {CURLINFO_REDIRECT_COUNT, JANET_NUMBER}},
+  {"query-http-connect-code", {CURLINFO_HTTP_CONNECTCODE, JANET_NUMBER}},
+  {"query-http-auth-avail", {CURLINFO_HTTPAUTH_AVAIL, JANET_NUMBER}},
+  {"query-proxy-auth-avail", {CURLINFO_PROXYAUTH_AVAIL, JANET_NUMBER}},
+  {"query-os-errno", {CURLINFO_OS_ERRNO, JANET_NUMBER}},
+  {"query-num-connects", {CURLINFO_NUM_CONNECTS, JANET_NUMBER}},
+  {"query-last-socket", {CURLINFO_LASTSOCKET, JANET_NUMBER}},
+  {"query-app-connect-time", {CURLINFO_APPCONNECT_TIME, JANET_NUMBER}},
+  {"query-condition-unmet", {CURLINFO_CONDITION_UNMET, JANET_NUMBER}},
+  {"query-rtsp-client-cseq", {CURLINFO_RTSP_CLIENT_CSEQ, JANET_NUMBER}},
+  {"query-rtsp-server-cseq", {CURLINFO_RTSP_SERVER_CSEQ, JANET_NUMBER}},
+  {"query-rtsp-cseq-recv", {CURLINFO_RTSP_CSEQ_RECV, JANET_NUMBER}},
+  {"query-primary-port", {CURLINFO_PRIMARY_PORT, JANET_NUMBER}},
+  {"query-local-port", {CURLINFO_LOCAL_PORT, JANET_NUMBER}},
+  {"query-http-version", {CURLINFO_HTTP_VERSION, JANET_NUMBER}},
+  {"query-proxy-ssl-verify-result", {CURLINFO_PROXY_SSL_VERIFYRESULT, JANET_NUMBER}},
+  {"query-protocol", {CURLINFO_PROTOCOL, JANET_NUMBER}},
+  {"query-total-time-t", {CURLINFO_TOTAL_TIME_T, JANET_NUMBER}},
+  {"query-name-lookup-time-t", {CURLINFO_NAMELOOKUP_TIME_T, JANET_NUMBER}},
+  {"query-connect-time-t", {CURLINFO_CONNECT_TIME_T, JANET_NUMBER}},
+  {"query-pre-transfer-time-t", {CURLINFO_PRETRANSFER_TIME_T, JANET_NUMBER}},
+  {"query-start-transfer-time-t", {CURLINFO_STARTTRANSFER_TIME_T, JANET_NUMBER}},
+  {"query-redirect-time-t", {CURLINFO_REDIRECT_TIME_T, JANET_NUMBER}},
+  {"query-app-connect-time-t", {CURLINFO_APPCONNECT_TIME_T, JANET_NUMBER}},
+
+  {"query-ssl-engines", {CURLINFO_SSL_ENGINES, JANET_POINTER}}, // TODO:
+  {"query-cookie-list", {CURLINFO_COOKIELIST, JANET_POINTER}}, // TODO:
+  {"query-cert-info", {CURLINFO_CERTINFO, JANET_POINTER}}, // TODO:
+  {"query-tls-session", {CURLINFO_TLS_SESSION, JANET_POINTER}}, // TODO:
+  {"query-active-socket", {CURLINFO_ACTIVESOCKET, JANET_POINTER}}, // TODOL
+  {"query-tls-ssl-ptr", {CURLINFO_TLS_SSL_PTR, JANET_POINTER}}, // TODO:
+};
+
+static void info_gen_dict(void) {
+  int32_t size = sizeof(_key_info_type_arr) / sizeof(_key_info_type_arr[0]);  
+
+  if (NULL == hashmap_info_to_type) {
+    hashmap_info_to_type = kh_init(HashMapCurlInfoToJanetType);
+  }  
+
+  int absent;
+  khint_t where;
+  for (int32_t idx = 0; idx < size; idx++){    
+    where = kh_put(HashMapCurlInfoToJanetType, hashmap_info_to_type, _key_info_type_arr[idx].name, &absent);
+    kh_value(hashmap_info_to_type, where) = &_key_info_type_arr[idx].ijm;
+  }
+}
+
+static const MapCurlInfoToJanetType* info_get(const char* key) {
+  MapCurlInfoToJanetType* val;
+  khint_t where = kh_get(HashMapCurlInfoToJanetType, hashmap_info_to_type, key);
+  val = kh_val(hashmap_info_to_type, where);
+  return val;  
+}
+
+static Janet info_query(CURL* curl, Janet* key) {    
+  const char* keyword = (const char*) janet_unwrap_keyword(*key);
+  const MapCurlInfoToJanetType* map = info_get(keyword);
+  if (NULL == map) {
+    janet_panic("invalid keyword");
+  }
+  
+  int type = map->type;
+  int info = map->info;
+  
+  int32_t res_number;
+  const char* res_string;
+  
+  switch(type) {
+    case JANET_NUMBER:      
+      if(CURLE_OK == curl_easy_getinfo(curl, info, &res_number)) {
+        return janet_wrap_integer(res_number);
+      }
+      break;
+    case JANET_STRING:      
+      if(CURLE_OK == curl_easy_getinfo(curl, info, &res_string)) {
+        return janet_wrap_string((const char*)res_string);
+      }
+      break;
+    default:
+      janet_panic("value type is not supported");
+      break;
+  };
+
+  return janet_wrap_false();
 }
 
 //==============================================================================
@@ -673,7 +856,7 @@ static Janet easy_setopt(int32_t argc, Janet *argv) {
   Curl* curl = janet_getabstract(argv, 0, &curl_obj);
   
   for (int32_t idx = 1; idx < argc; idx+=2){    
-    opts_set(curl->curl, argv + idx, argv + idx + 1);
+    options_set(curl->curl, argv + idx, argv + idx + 1);
   }
 
   return janet_wrap_true();
@@ -792,6 +975,14 @@ static Janet easy_perform(int32_t argc, Janet *argv) {
   return janet_wrap_nil();
 }
 
+static Janet easy_query(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 2);
+
+  Curl* curl = janet_getabstract(argv, 0, &curl_obj);  
+
+  return info_query(curl->curl, argv + 1);
+}
+
 static const JanetReg curl_easy_cfuns[] = {
     {
       "easy/init", easy_init,
@@ -852,12 +1043,87 @@ static const JanetReg curl_easy_cfuns[] = {
       "easy/perform", easy_perform,
       "(easy/perform curl) \n\n"
       "perform a blocking file transfer"
-    },    
+    },
+    {
+      "easy/query", easy_query,
+      "(easy/query curl :query-effective-url) \n\n"
+      "query information from curl easy handler"
+    },
     {NULL, NULL, NULL}
 };
 
 static void submod_easy(JanetTable *env) {
     janet_cfuns(env, "curl", curl_easy_cfuns);
+}
+
+//==============================================================================
+// ███████╗██╗  ██╗ █████╗ ██████╗ ███████╗
+// ██╔════╝██║  ██║██╔══██╗██╔══██╗██╔════╝
+// ███████╗███████║███████║██████╔╝█████╗  
+// ╚════██║██╔══██║██╔══██║██╔══██╗██╔══╝  
+// ███████║██║  ██║██║  ██║██║  ██║███████╗
+// ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝
+//==============================================================================
+
+static Janet share_init(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 0);
+  (void)argv;
+
+  CURLSH* curlsh = curl_share_init();
+  return curlsh ? curlsh_make(curlsh) : janet_wrap_nil();
+}
+
+static Janet share_setopt(int32_t argc, Janet *argv) {
+  janet_arity(argc, 2, -1);
+
+  if ((argc - 1) % 2 != 0) {
+    janet_panic("options count must be even, options are regarded as tuple");
+  }
+
+  janet_panic("this function is implemented yet");  
+
+  (void) argv;
+  // Curl* curl = janet_getabstract(argv, 0, &curl_obj);
+
+  // for (int32_t idx = 1; idx < argc; idx+=2){    
+  //   options_set(curl->curl, argv + idx, argv + idx + 1);
+  // }
+
+  return janet_wrap_true();  
+}
+
+static Janet share_strerror(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 1);
+  
+  int code = janet_getinteger(argv, 0);
+  
+  const char* errstr = curl_share_strerror(code);
+  Janet res = janet_cstringv(errstr);
+  
+  return res;
+}
+
+static const JanetReg curl_share_cfuns[] = {
+    {
+      "share/init", share_init,
+      "(def curl (share/init)) \n\n"
+      "create a new curl share handler"
+    },
+    {
+      "share/strerror", share_strerror,
+      "(share/strerror code) \n\n"
+      "return error string of an error code"
+    },
+    {
+      "share/setopt", share_setopt,
+      "(share/setopt code :url \"https://janet-lang.org\") \n\n"
+      "set options for a curl share handle"
+    },    
+    {NULL, NULL, NULL}
+};
+
+static void submod_share(JanetTable *env) {
+    janet_cfuns(env, "curl", curl_share_cfuns);
 }
 
 //==============================================================================
@@ -964,7 +1230,8 @@ static void submod_url(JanetTable *env) {
 //==============================================================================
 
 JANET_MODULE_ENTRY(JanetTable *env) {
-  opts_gen_dict();
+  options_gen_dict();
+  info_gen_dict();
 
   // GENERAL
   janet_def(env, "version", janet_cstringv(LIBCURL_VERSION),"underlying libcurl value string");
@@ -1060,6 +1327,74 @@ JANET_MODULE_ENTRY(JanetTable *env) {
   janet_def(env, "url-part-path", janet_wrap_integer(CURLUPART_PATH), "path part of url");
   janet_def(env, "url-part-query", janet_wrap_integer(CURLUPART_QUERY), "query part of url");
   janet_def(env, "url-part-fragment", janet_wrap_integer(CURLUPART_FRAGMENT), "fragment part of url");
+
+  // CURLINFO
+
+  
+  janet_def(env, "query-none", janet_wrap_integer(CURLINFO_NONE), "query none");
+  janet_def(env, "query-effective-url", janet_wrap_integer(CURLINFO_EFFECTIVE_URL), "query effective-url");
+  janet_def(env, "query-response-code", janet_wrap_integer(CURLINFO_RESPONSE_CODE), "query response-code");
+  janet_def(env, "query-total-time", janet_wrap_integer(CURLINFO_TOTAL_TIME), "query total-time");
+  janet_def(env, "query-name-lookup-time", janet_wrap_integer(CURLINFO_NAMELOOKUP_TIME), "query namelookup-time");
+  janet_def(env, "query-connect-time", janet_wrap_integer(CURLINFO_CONNECT_TIME), "query connect-time");
+  janet_def(env, "query-pre-transfer-time", janet_wrap_integer(CURLINFO_PRETRANSFER_TIME), "query pretransfer-time");
+  janet_def(env, "query-size-upload", janet_wrap_integer(CURLINFO_SIZE_UPLOAD), "query size-upload");
+  janet_def(env, "query-size-upload-t", janet_wrap_integer(CURLINFO_SIZE_UPLOAD_T), "query size-upload-t");
+  janet_def(env, "query-size-download", janet_wrap_integer(CURLINFO_SIZE_DOWNLOAD), "query size-download");
+  janet_def(env, "query-size-download-t", janet_wrap_integer(CURLINFO_SIZE_DOWNLOAD_T), "query size-download-t");
+  janet_def(env, "query-speed-download", janet_wrap_integer(CURLINFO_SPEED_DOWNLOAD), "query speed-download");
+  janet_def(env, "query-speed-download-t", janet_wrap_integer(CURLINFO_SPEED_DOWNLOAD_T), "query speed-download-t");
+  janet_def(env, "query-speed-upload", janet_wrap_integer(CURLINFO_SPEED_UPLOAD), "query speed-upload");
+  janet_def(env, "query-speed-upload-t", janet_wrap_integer(CURLINFO_SPEED_UPLOAD_T), "query speed-upload-t");
+  janet_def(env, "query-header-size", janet_wrap_integer(CURLINFO_HEADER_SIZE), "query header-size");
+  janet_def(env, "query-request-size", janet_wrap_integer(CURLINFO_REQUEST_SIZE), "query request-size");
+  janet_def(env, "query-ssl-verify-result", janet_wrap_integer(CURLINFO_SSL_VERIFYRESULT), "query ssl-verifyresult");
+  janet_def(env, "query-file-time", janet_wrap_integer(CURLINFO_FILETIME), "query filetime");
+  janet_def(env, "query-file-time-t", janet_wrap_integer(CURLINFO_FILETIME_T), "query filetime-t");
+  janet_def(env, "query-content-length-download", janet_wrap_integer(CURLINFO_CONTENT_LENGTH_DOWNLOAD), "query content-length-download");
+  janet_def(env, "query-content-length-download-t", janet_wrap_integer(CURLINFO_CONTENT_LENGTH_DOWNLOAD_T), "query content-length-download-t");
+  janet_def(env, "query-content-length-upload", janet_wrap_integer(CURLINFO_CONTENT_LENGTH_UPLOAD), "query content-length-upload");
+  janet_def(env, "query-content-length-upload-t", janet_wrap_integer(CURLINFO_CONTENT_LENGTH_UPLOAD_T), "query content-length-upload-t");
+  janet_def(env, "query-start-transfer-time", janet_wrap_integer(CURLINFO_STARTTRANSFER_TIME), "query starttransfer-time");
+  janet_def(env, "query-content-type", janet_wrap_integer(CURLINFO_CONTENT_TYPE), "query content-type");
+  janet_def(env, "query-redirect-time", janet_wrap_integer(CURLINFO_REDIRECT_TIME), "query redirect-time");
+  janet_def(env, "query-redirect-count", janet_wrap_integer(CURLINFO_REDIRECT_COUNT), "query redirect-count");
+  janet_def(env, "query-private", janet_wrap_integer(CURLINFO_PRIVATE), "query private");
+  janet_def(env, "query-http-connect-code", janet_wrap_integer(CURLINFO_HTTP_CONNECTCODE), "query http-connectcode");
+  janet_def(env, "query-http-auth-avail", janet_wrap_integer(CURLINFO_HTTPAUTH_AVAIL), "query httpauth-avail");
+  janet_def(env, "query-proxy-auth-avail", janet_wrap_integer(CURLINFO_PROXYAUTH_AVAIL), "query proxyauth-avail");
+  janet_def(env, "query-os-errno", janet_wrap_integer(CURLINFO_OS_ERRNO), "query os-errno");
+  janet_def(env, "query-num-connects", janet_wrap_integer(CURLINFO_NUM_CONNECTS), "query num-connects");
+  janet_def(env, "query-ssl-engines", janet_wrap_integer(CURLINFO_SSL_ENGINES), "query ssl-engines");
+  janet_def(env, "query-cookie-list", janet_wrap_integer(CURLINFO_COOKIELIST), "query cookielist");
+  janet_def(env, "query-last-socket", janet_wrap_integer(CURLINFO_LASTSOCKET), "query lastsocket");
+  janet_def(env, "query-ftp-entry-path", janet_wrap_integer(CURLINFO_FTP_ENTRY_PATH), "query ftp-entry-path");
+  janet_def(env, "query-redirect-url", janet_wrap_integer(CURLINFO_REDIRECT_URL), "query redirect-url");
+  janet_def(env, "query-primary-ip", janet_wrap_integer(CURLINFO_PRIMARY_IP), "query primary-ip");
+  janet_def(env, "query-app-connect-time", janet_wrap_integer(CURLINFO_APPCONNECT_TIME), "query appconnect-time");
+  janet_def(env, "query-cert-info", janet_wrap_integer(CURLINFO_CERTINFO), "query certinfo");
+  janet_def(env, "query-condition-unmet", janet_wrap_integer(CURLINFO_CONDITION_UNMET), "query condition-unmet");
+  janet_def(env, "query-rtsp-session-id", janet_wrap_integer(CURLINFO_RTSP_SESSION_ID), "query rtsp-session-id");
+  janet_def(env, "query-rtsp-client-cseq", janet_wrap_integer(CURLINFO_RTSP_CLIENT_CSEQ), "query rtsp-client-cseq");
+  janet_def(env, "query-rtsp-server-cseq", janet_wrap_integer(CURLINFO_RTSP_SERVER_CSEQ), "query rtsp-server-cseq");
+  janet_def(env, "query-rtsp-cseq-recv", janet_wrap_integer(CURLINFO_RTSP_CSEQ_RECV), "query rtsp-cseq-recv");
+  janet_def(env, "query-primary-port", janet_wrap_integer(CURLINFO_PRIMARY_PORT), "query primary-port");
+  janet_def(env, "query-local-ip", janet_wrap_integer(CURLINFO_LOCAL_IP), "query local-ip");
+  janet_def(env, "query-local-port", janet_wrap_integer(CURLINFO_LOCAL_PORT), "query local-port");
+  janet_def(env, "query-tls-session", janet_wrap_integer(CURLINFO_TLS_SESSION), "query tls-session");
+  janet_def(env, "query-active-socket", janet_wrap_integer(CURLINFO_ACTIVESOCKET), "query activesocket");
+  janet_def(env, "query-tls-ssl-ptr", janet_wrap_integer(CURLINFO_TLS_SSL_PTR), "query tls-ssl-ptr");
+  janet_def(env, "query-http-version", janet_wrap_integer(CURLINFO_HTTP_VERSION), "query http-version");
+  janet_def(env, "query-proxy-ssl-verify-result", janet_wrap_integer(CURLINFO_PROXY_SSL_VERIFYRESULT), "query proxy-ssl-verifyresult");
+  janet_def(env, "query-protocol", janet_wrap_integer(CURLINFO_PROTOCOL), "query protocol");
+  janet_def(env, "query-scheme", janet_wrap_integer(CURLINFO_SCHEME), "query scheme");
+  janet_def(env, "query-total-time-t", janet_wrap_integer(CURLINFO_TOTAL_TIME_T), "query total-time-t");
+  janet_def(env, "query-name-lookup-time-t", janet_wrap_integer(CURLINFO_NAMELOOKUP_TIME_T), "query namelookup-time-t");
+  janet_def(env, "query-connect-time-t", janet_wrap_integer(CURLINFO_CONNECT_TIME_T), "query connect-time-t");
+  janet_def(env, "query-pre-transfer-time-t", janet_wrap_integer(CURLINFO_PRETRANSFER_TIME_T), "query pretransfer-time-t");
+  janet_def(env, "query-start-transfer-time-t", janet_wrap_integer(CURLINFO_STARTTRANSFER_TIME_T), "query starttransfer-time-t");
+  janet_def(env, "query-redirect-time-t", janet_wrap_integer(CURLINFO_REDIRECT_TIME_T), "query redirect-time-t");
+  janet_def(env, "query-app-connect-time-t", janet_wrap_integer(CURLINFO_APPCONNECT_TIME_T), "query appconnect-time-t");
 
   // .:MASK:.
   // CURLOPT_SSH_AUTH_TYPES  
@@ -1210,5 +1545,6 @@ JANET_MODULE_ENTRY(JanetTable *env) {
 
   // submodules
   submod_easy(env);
+  submod_share(env);
   submod_url(env);
 }
