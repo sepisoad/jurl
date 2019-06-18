@@ -27,6 +27,8 @@ typedef struct MapCurlInfoToJanetType MapCurlInfoToJanetType;
 typedef struct Curl Curl;
 typedef struct Curlsh Curlsh;
 typedef struct Url Url;
+typedef struct Mime Mime; 
+typedef struct MimePart MimePart; // does not need GC, it gets freed when Mime parent object GC happens
 
 struct MapCurlOptionToJanetType {
   int option;
@@ -48,6 +50,14 @@ struct Curlsh {
 
 struct Url{
   CURLU* url;
+};
+
+struct Mime{
+  curl_mime* mime;
+};
+
+struct MimePart{
+  curl_mimepart* mimepart;
 };
 
 //==============================================================================
@@ -84,6 +94,13 @@ static Janet share_strerror(int32_t argc, Janet *argv);
 static int url_gc_fn (void *data, size_t len);
 static Janet url_get_fn (void *data, Janet key);
 static Janet url_init(int32_t argc, Janet *argv);
+static Janet url_clone(int32_t argc, Janet *argv);
+static Janet url_get(int32_t argc, Janet *argv);
+static Janet url_set(int32_t argc, Janet *argv);
+
+static int mime_gc_fn (void *data, size_t len);
+static Janet mime_get_fn (void *data, Janet key);
+static Janet mime_init(int32_t argc, Janet *argv);
 
 //==============================================================================
 //  ██████╗ ██╗      ██████╗ ██████╗  █████╗ ██╗     ███████╗
@@ -103,6 +120,8 @@ khash_t(HashMapCurlInfoToJanetType) *hashmap_info_to_type = NULL;
 JanetAbstractType curl_obj = {"curl", curl_gc_fn, NULL, curl_get_fn, NULL, NULL, NULL, NULL};
 JanetAbstractType curlsh_obj = {"curlsh", curlsh_gc_fn, NULL, curlsh_get_fn, NULL, NULL, NULL, NULL};
 JanetAbstractType url_obj = {"url", url_gc_fn, NULL, url_get_fn, NULL, NULL, NULL, NULL};
+JanetAbstractType mime_obj = {"mime", mime_gc_fn, NULL, mime_get_fn, NULL, NULL, NULL, NULL};
+JanetAbstractType mimepart_obj = {"mimepart", NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 static JanetMethod curl_methods[] = {  
   {"clone", easy_clone},
@@ -125,6 +144,13 @@ static JanetMethod curlsh_methods[] = {
 };
 
 static JanetMethod url_methods[] = {
+  {"clone", url_clone},
+  {"get", url_get},
+  {"set", url_set},
+  {NULL, NULL}
+};
+
+static JanetMethod mime_methods[] = { // FIXME:
   {NULL, NULL}
 };
 
@@ -206,6 +232,35 @@ static Janet url_get_fn (void *data, Janet key) {
   return janet_getmethod(janet_unwrap_keyword(key), url_methods);
 }
 
+static Janet mime_make(curl_mime* mime) {
+  Mime* m = (Mime*) janet_abstract(&mime_obj, sizeof(Mime));
+  m->mime = mime;
+  return janet_wrap_abstract(m);
+}
+
+static int mime_gc_fn (void *data, size_t len) {
+  (void) len;
+
+  Mime* m = (Mime*)data;  
+  curl_mime_free(m->mime);
+
+  return 0;
+}
+
+static Janet mime_get_fn (void *data, Janet key) {
+  (void) data;
+
+  if (!janet_checktype(key, JANET_KEYWORD))
+    janet_panicf("expected keyword, got %v", key);
+  return janet_getmethod(janet_unwrap_keyword(key), mime_methods);
+}
+
+static Janet mimepart_make(curl_mimepart* mimepart) {
+  MimePart* mp = (MimePart*) janet_abstract(&mimepart_obj, sizeof(MimePart));
+  mp->mimepart = mimepart;
+  return janet_wrap_abstract(mp);
+}
+
 //==============================================================================
 //  ██████╗ █████╗ ██╗     ██╗     ██████╗  █████╗  ██████╗██╗  ██╗███████╗
 // ██╔════╝██╔══██╗██║     ██║     ██╔══██╗██╔══██╗██╔════╝██║ ██╔╝██╔════╝
@@ -263,6 +318,48 @@ static int funcs_progress(void *udata, double dltotal, double dlnow, double ulto
 
   return 1; // continue
 }
+
+// static size_t funcs_mime_mem_read(char *buffer, size_t size, size_t nitems, void *instream)
+// {
+//   curl_mimepart *part = (curl_mimepart *) instream;
+//   size_t sz = (size_t) part->datasize - part->state.offset;
+//   (void) size;   /* Always 1.*/
+
+//   if(sz > nitems)
+//     sz = nitems;
+
+//   if(sz)
+//     memcpy(buffer, (char *) &part->data[part->state.offset], sz);
+
+//   part->state.offset += sz;
+//   return sz;
+// }
+
+// static int funcs_mime_mem_seek(void *instream, curl_off_t offset, int whence)
+// {
+//   curl_mimepart *part = (curl_mimepart *) instream;
+
+//   switch(whence) {
+//   case SEEK_CUR:
+//     offset += part->state.offset;
+//     break;
+//   case SEEK_END:
+//     offset += part->datasize;
+//     break;
+//   }
+
+//   if(offset < 0 || offset > part->datasize)
+//     return CURL_SEEKFUNC_FAIL;
+
+//   part->state.offset = (size_t) offset;
+//   return CURL_SEEKFUNC_OK;
+// }
+
+// static void funcs_mime_mem_free(void *ptr)
+// {
+//   Curl_safefree(((curl_mimepart *) ptr)->data);
+// }
+
 
 //==============================================================================
 //  ██████╗ ██████╗ ████████╗██╗ ██████╗ ███╗   ██╗███████╗
@@ -1221,6 +1318,208 @@ static void submod_url(JanetTable *env) {
 }
 
 //==============================================================================
+// ███╗   ███╗██╗███╗   ███╗███████╗
+// ████╗ ████║██║████╗ ████║██╔════╝
+// ██╔████╔██║██║██╔████╔██║█████╗  
+// ██║╚██╔╝██║██║██║╚██╔╝██║██╔══╝  
+// ██║ ╚═╝ ██║██║██║ ╚═╝ ██║███████╗
+// ╚═╝     ╚═╝╚═╝╚═╝     ╚═╝╚══════╝
+//==============================================================================
+
+static Janet mime_init(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 1);
+  
+  Curl* curl = janet_getabstract(argv, 0, &curl_obj);
+  curl_mime* mime = curl_mime_init(curl->curl);
+
+  return mime ? mime_make(mime) : janet_wrap_nil();
+}
+
+static Janet mime_part(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 1);
+  
+  Mime* mime = janet_getabstract(argv, 0, &curl_obj);
+  curl_mimepart* mimepart = curl_mime_addpart(mime->mime);
+  
+  return mimepart ? mimepart_make(mimepart) : janet_wrap_nil();
+}
+
+static Janet mime_subpart(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 2);
+  
+  Mime* mime = janet_getabstract(argv, 0, &curl_obj);
+  MimePart* mimepart = janet_getabstract(argv, 1, &curl_obj);
+  
+  if (CURLE_OK == curl_mime_subparts(mimepart->mimepart, mime->mime)) {
+    return janet_wrap_true();
+  }
+
+  return janet_wrap_false();
+}
+
+static Janet mime_name(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 2);
+    
+  MimePart* mimepart = janet_getabstract(argv, 0, &curl_obj);
+  const char* name = janet_getcstring(argv, 1);
+  
+  if (CURLE_OK == curl_mime_name(mimepart->mimepart, name)) {
+    return janet_wrap_true();
+  }
+
+  return janet_wrap_false();
+}
+
+static Janet mime_type(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 2);
+    
+  MimePart* mimepart = janet_getabstract(argv, 0, &curl_obj);
+  const char* type = janet_getcstring(argv, 1);
+  
+  if (CURLE_OK == curl_mime_type(mimepart->mimepart, type)) {
+    return janet_wrap_true();
+  }
+
+  return janet_wrap_false();
+}
+
+static Janet mime_data(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 2);
+    
+  MimePart* mimepart = janet_getabstract(argv, 0, &curl_obj);
+  const JanetBuffer* buffer = janet_getbuffer(argv, 1);
+  
+  if (CURLE_OK == curl_mime_data(mimepart->mimepart, (const char*)buffer->data, buffer->count)) {
+    return janet_wrap_true();
+  }
+
+  return janet_wrap_false();
+}
+
+static Janet mime_encoder(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 2);
+    
+  MimePart* mimepart = janet_getabstract(argv, 0, &curl_obj);  
+  const char* encoding = janet_getcstring(argv, 1);
+  
+  if (CURLE_OK == curl_mime_encoder(mimepart->mimepart, encoding)) {
+    return janet_wrap_true();
+  }
+
+  return janet_wrap_false();
+}
+
+static Janet mime_headers(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 2);
+    
+  MimePart* mimepart = janet_getabstract(argv, 0, &curl_obj);  
+  JanetView array = janet_getindexed(argv, 1);
+  
+  if (array.len <= 0) {
+    janet_panic("input list cannot be empty");
+  }
+
+  const char* str1 = (const char*) janet_unwrap_string(array.items[0]);
+  struct curl_slist* list = curl_slist_append(NULL, str1);
+
+  for (int32_t idx = 1; idx < array.len; idx++){
+    const char* str = (const char*) janet_unwrap_string(array.items[idx]);
+    list = curl_slist_append(list, str);
+  }
+  
+  const int auto_free = 1;
+  if (CURLE_OK == curl_mime_headers(mimepart->mimepart, list, auto_free)) {
+    return janet_wrap_true();
+  }
+
+  return janet_wrap_false();
+}
+
+static Janet mime_filename(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 2);
+    
+  MimePart* mimepart = janet_getabstract(argv, 0, &curl_obj);  
+  const char* filename = janet_getcstring(argv, 1);
+  
+  if (CURLE_OK == curl_mime_filename(mimepart->mimepart, filename)) {
+    return janet_wrap_true();
+  }
+
+  return janet_wrap_false();
+}
+
+static Janet mime_filedata(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 2);
+    
+  MimePart* mimepart = janet_getabstract(argv, 0, &curl_obj);  
+  const char* filename = janet_getcstring(argv, 1);
+  
+  if (CURLE_OK == curl_mime_filedata(mimepart->mimepart, filename)) {
+    return janet_wrap_true();
+  }
+
+  return janet_wrap_false();
+}
+
+static const JanetReg curl_mime_cfuns[] = {
+    {
+      "mime/init", mime_init,
+      "(mime/init curl) \n\n"
+      "create a mime handle"
+    },
+    {
+      "mime/part", mime_part,
+      "(mime/part mime) \n\n"
+      "append a new empty part to a mime object"
+    },
+    {
+      "mime/subpart", mime_subpart,
+      "(mime/subpart mimepart mime) \n\n"
+      "set subparts of a multipart mime part"
+    },
+    {
+      "mime/name", mime_name,
+      "(mime/name mimepart \"wtf\") \n\n"
+      "set a mime part's name"
+    },
+    {
+      "mime/type", mime_type,
+      "(mime/type mimepart \"image\\png\") \n\n"
+      "set a mime part's content type"
+    },
+    {
+      "mime/data", mime_data,
+      "(mime/data mimepart buffer) \n\n"
+      "set a mime part's content"
+    },
+    {
+      "mime/encoder", mime_encoder,
+      "(mime/encoder mimepart buffer) \n\n"
+      "set mime data transfer encoder"
+    },
+    {
+      "mime/headers", mime_headers,
+      "(mime/headers mimepart [\"aaa\" \"bbb\"]) \n\n"
+      "set a mime part's custom headers"
+    },
+    {
+      "mime/filename", mime_filename,
+      "(mime/filename mimepart \"myfile.png\") \n\n"
+      "set a mime part's remote file name"
+    },
+    {
+      "mime/filedata", mime_filedata,
+      "(mime/filedata mimepart \"/home/lol/myfile.png\") \n\n"
+      "set a mime part's body data from a file contents"
+    },
+    {NULL, NULL, NULL}
+};
+
+static void submod_mime(JanetTable *env) {
+  janet_cfuns(env, "curl", curl_mime_cfuns);
+}
+
+//==============================================================================
 // ███╗   ███╗ ██████╗ ██████╗ ██╗   ██╗██╗     ███████╗
 // ████╗ ████║██╔═══██╗██╔══██╗██║   ██║██║     ██╔════╝
 // ██╔████╔██║██║   ██║██║  ██║██║   ██║██║     █████╗  
@@ -1328,9 +1627,7 @@ JANET_MODULE_ENTRY(JanetTable *env) {
   janet_def(env, "url-part-query", janet_wrap_integer(CURLUPART_QUERY), "query part of url");
   janet_def(env, "url-part-fragment", janet_wrap_integer(CURLUPART_FRAGMENT), "fragment part of url");
 
-  // CURLINFO
-
-  
+  // QUERY  
   janet_def(env, "query-none", janet_wrap_integer(CURLINFO_NONE), "query none");
   janet_def(env, "query-effective-url", janet_wrap_integer(CURLINFO_EFFECTIVE_URL), "query effective-url");
   janet_def(env, "query-response-code", janet_wrap_integer(CURLINFO_RESPONSE_CODE), "query response-code");
@@ -1547,4 +1844,5 @@ JANET_MODULE_ENTRY(JanetTable *env) {
   submod_easy(env);
   submod_share(env);
   submod_url(env);
+  submod_mime(env);
 }
