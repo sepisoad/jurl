@@ -8,6 +8,5 @@
 
 (declare-native
   :name "curl"
-  :lflags @["-lcurl"]
-  :cflags @["-Isrc"]
-  :source @["src/curl.c"])
+  :lflags ["-lcurl"]
+  :source ["src/curl.c"])

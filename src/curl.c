@@ -307,7 +307,7 @@ static size_t funcs_read(char *buff, size_t size, size_t count, void *udata) {
   JanetFunction* jfunc = (JanetFunction *)udata;
   Janet jbuff = janet_call(jfunc, 1, &len);
   JanetByteView bytes = janet_getbytes(&jbuff, 0);
-  if (bytes.len > size) bytes.len = (int32_t) size;
+  if ((size_t) bytes.len > size) bytes.len = (int32_t) size;
   memcpy(buff, bytes.bytes, bytes.len);
   return (size_t) bytes.len;
 }
@@ -690,7 +690,6 @@ static void options_set(Curl* c, Janet* key, Janet* val) {
   
   int type = map->type;
   int opt = map->option;
-  int32_t integer;
   JanetFunction *fn;
   
   switch(type) {
@@ -1062,7 +1061,7 @@ static Janet easy_send(int32_t argc, Janet *argv) {
   size_t sendlen = -1;
   JanetByteView buffer = janet_getbytes(argv, 1);  
 
-  int res = curl_easy_send(curl->curl, buffer.bytes , buffer.len, &sendlen);
+  int res = curl_easy_send(curl->curl, buffer.bytes, buffer.len, &sendlen);
 
   switch (res){
   case CURLE_OK:
