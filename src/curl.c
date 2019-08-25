@@ -303,11 +303,13 @@ static size_t funcs_write(void *buff, size_t size, size_t count, void *udata) {
 }
 
 static size_t funcs_read(char *buff, size_t size, size_t count, void *udata) {
-  Janet len = janet_wrap_integer(size * count);
+  Janet len = janet_wrap_number(size * count);
   JanetFunction* jfunc = (JanetFunction *)udata;
   Janet jbuff = janet_call(jfunc, 1, &len);
-  buff = (char*) janet_unwrap_string(jbuff);
-  return (size_t) strlen(buff);
+  JanetByteView bytes = janet_getbytes(&jbuff, 0);
+  if (bytes.len > size) bytes.len = (int32_t) size;
+  memcpy(buff, bytes.bytes, bytes.len);
+  return (size_t) bytes.len;
 }
 
 static int funcs_progress(void *udata, double dltotal, double dlnow, double ultotal, double ulnow) {
