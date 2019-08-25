@@ -1,3 +1,5 @@
 .vscode
 src/build
+build
+test/DOWNLOAD
 tests/DOWNLOAD
