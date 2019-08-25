@@ -2,7 +2,8 @@
 
 (defn download
   "Download a file with curl easy"
-  [url to]
+  [url &opt to]
+  (default to (last (string/split "/" url)))
   (def c (curl/easy/init))
   (with [file (file/open to :wb)]
     (var run-yet false)
@@ -23,8 +24,8 @@
              :write-function (fn [buf] (file/write file buf))
              :no-progress? false
              :progress-function progress)
-    (:perform c)))
+    (:perform c)
+    (print "Wrote to \e[36m" to "\e[0m")))
 
-(download 
-  "https://upload.wikimedia.org/wikipedia/commons/7/79/Big_Buck_Bunny_small.ogv"  
-  "test/DOWNLOAD")
+(download "https://upload.wikimedia.org/wikipedia/commons/7/79/Big_Buck_Bunny_small.ogv"
+          "test/DOWNLOAD")
