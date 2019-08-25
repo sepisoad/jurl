@@ -1,4 +1,4 @@
-#include <janet/janet.h>
+#include <janet.h>
 #include <curl/curl.h>
 #include "khash.h"
 
@@ -42,6 +42,10 @@ struct MapCurlInfoToJanetType {
 
 struct Curl {
   CURL* curl;
+  JanetFunction *write_function;
+  JanetFunction *header_function;
+  JanetFunction *read_function;
+  JanetFunction *progress_function;
 };
 
 struct Curlsh {
@@ -86,6 +90,7 @@ static Janet easy_perform(int32_t argc, Janet *argv);
 static Janet easy_query(int32_t argc, Janet *argv);
 
 static int curlsh_gc_fn (void *data, size_t len);
+static int curl_mark_fn (void *data, size_t len);
 static Janet curlsh_get_fn (void *data, Janet key);
 static Janet share_init(int32_t argc, Janet *argv);
 static Janet share_setopt(int32_t argc, Janet *argv);
@@ -117,7 +122,7 @@ khash_t(HashMapCurlOptionToJanetType) *hashmap_opt_to_type = NULL;
 KHASH_MAP_INIT_STR(HashMapCurlInfoToJanetType, MapCurlInfoToJanetType*);
 khash_t(HashMapCurlInfoToJanetType) *hashmap_info_to_type = NULL;
 
-JanetAbstractType curl_obj = {"curl", curl_gc_fn, NULL, curl_get_fn, NULL, NULL, NULL, NULL};
+JanetAbstractType curl_obj = {"curl", curl_gc_fn, curl_mark_fn, curl_get_fn, NULL, NULL, NULL, NULL};
 JanetAbstractType curlsh_obj = {"curlsh", curlsh_gc_fn, NULL, curlsh_get_fn, NULL, NULL, NULL, NULL};
 JanetAbstractType url_obj = {"url", url_gc_fn, NULL, url_get_fn, NULL, NULL, NULL, NULL};
 JanetAbstractType mime_obj = {"mime", mime_gc_fn, NULL, mime_get_fn, NULL, NULL, NULL, NULL};
@@ -165,6 +170,7 @@ static JanetMethod mime_methods[] = { // FIXME:
 
 static Janet curl_make(CURL *curl) {
   Curl* c = (Curl*) janet_abstract(&curl_obj, sizeof(Curl));
+  memset(c, 0, sizeof(Curl));
   c->curl = curl;
   return janet_wrap_abstract(c);
 }
@@ -175,6 +181,17 @@ static int curl_gc_fn (void *data, size_t len) {
   Curl* c = (Curl*)data;  
   curl_easy_cleanup(c->curl);
 
+  return 0;
+}
+
+static int curl_mark_fn (void *data, size_t len) {
+  (void) len;
+
+  Curl* c = (Curl*)data;  
+  if (c->read_function) janet_mark(janet_wrap_function(c->read_function));
+  if (c->write_function) janet_mark(janet_wrap_function(c->write_function));
+  if (c->progress_function) janet_mark(janet_wrap_function(c->progress_function));
+  if (c->header_function) janet_mark(janet_wrap_function(c->header_function));
   return 0;
 }
 
@@ -278,7 +295,7 @@ static size_t funcs_write(void *buff, size_t size, size_t count, void *udata) {
     janet_buffer_push_bytes(jbuff, buff, len);
     Janet arg = janet_wrap_buffer(jbuff);
 
-    JanetFunction* jfunc = janet_unwrap_function(*(Janet*)udata);
+    JanetFunction* jfunc = (JanetFunction *)udata;
     janet_call(jfunc, 1, &arg);
   }
 
@@ -287,36 +304,23 @@ static size_t funcs_write(void *buff, size_t size, size_t count, void *udata) {
 
 static size_t funcs_read(char *buff, size_t size, size_t count, void *udata) {
   Janet len = janet_wrap_integer(size * count);
-  JanetFunction* jfunc = janet_unwrap_function((*(Janet*)udata));
+  JanetFunction* jfunc = (JanetFunction *)udata;
   Janet jbuff = janet_call(jfunc, 1, &len);
   buff = (char*) janet_unwrap_string(jbuff);
-
-  printf("DEBUF\n%s\n", buff);
-
   return (size_t) strlen(buff);
 }
 
 static int funcs_progress(void *udata, double dltotal, double dlnow, double ultotal, double ulnow) {
-  Janet dlt = janet_wrap_number(dltotal);
-  Janet dln = janet_wrap_number(dlnow);
-  Janet ult = janet_wrap_number(ultotal);
-  Janet uln = janet_wrap_number(ulnow);
-  JanetFunction* jfunc = janet_unwrap_function((*(Janet*)udata));
-  
-  Janet* args = calloc(4, sizeof(Janet));  
-  args[0] = dlt;
-  args[1] = dln; 
-  args[2] = ult; 
-  args[3] = uln;
+  JanetFunction* jfunc = (JanetFunction *)udata;
+  Janet args[4];
+  args[0] = janet_wrap_number(dltotal);
+  args[1] = janet_wrap_number(dlnow);
+  args[2] = janet_wrap_number(ultotal);
+  args[3] = janet_wrap_number(ulnow);
 
   Janet res = janet_call(jfunc, 4, args);
-  if (janet_unwrap_boolean(res)) {
-    return 0; // stop
-  }
 
-  free(args);
-
-  return 1; // continue
+  return janet_truthy(res);
 }
 
 // static size_t funcs_mime_mem_read(char *buffer, size_t size, size_t nitems, void *instream)
@@ -674,18 +678,22 @@ static const MapCurlOptionToJanetType* options_get(const char* key) {
   return val;  
 }
 
-static void options_set(CURL* curl, Janet* key, Janet* val) {    
+static void options_set(Curl* c, Janet* key, Janet* val) {    
   const char* keyword = (const char*) janet_unwrap_keyword(*key);
   const MapCurlOptionToJanetType* map = options_get(keyword);
+  CURL *curl = c->curl;
   if (NULL == map) {
     janet_panic("invalid keyword");
   }
   
   int type = map->type;
   int opt = map->option;
+  int32_t integer;
+  JanetFunction *fn;
   
   switch(type) {
     case JANET_NUMBER:      
+      if (!janet_checkint(*val)) janet_panicf("expected integer, got %v", *val);
       curl_easy_setopt(curl, opt, janet_unwrap_integer(*val));
       break;
     case JANET_BOOLEAN:
@@ -695,18 +703,23 @@ static void options_set(CURL* curl, Janet* key, Janet* val) {
       curl_easy_setopt(curl, opt, janet_unwrap_string(*val));
       break;
     case JANET_FUNCTION:
+      fn = janet_unwrap_function(*val);
       if(0 == strcmp(keyword, "write-function")) {
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)val);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)fn);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, funcs_write);
+        c->write_function = fn;
       } else if(0 == strcmp(keyword, "header-function")) {
-        curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void*)val);
+        curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void*)fn);
         curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, funcs_write);
+        c->header_function = fn;
       } else if(0 == strcmp(keyword, "read-function")) {
-        curl_easy_setopt(curl, CURLOPT_READDATA, (void*)val);
+        curl_easy_setopt(curl, CURLOPT_READDATA, (void*)fn);
         curl_easy_setopt(curl, CURLOPT_READFUNCTION, funcs_read);
+        c->read_function = fn;
       } else if(0 == strcmp(keyword, "progress-function")) {
-        curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, (void*)val);
+        curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, (void*)fn);
         curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, funcs_progress);
+        c->progress_function = fn;
       }      
 
       break;
@@ -896,6 +909,7 @@ static Janet easy_escape(int32_t argc, Janet *argv) {
 
   char* ourl = curl_easy_escape(curl->curl, iurl, len);
   if (NULL == ourl) {
+      curl_free(ourl);
     return janet_wrap_false();
   }
 
@@ -953,7 +967,7 @@ static Janet easy_setopt(int32_t argc, Janet *argv) {
   Curl* curl = janet_getabstract(argv, 0, &curl_obj);
   
   for (int32_t idx = 1; idx < argc; idx+=2){    
-    options_set(curl->curl, argv + idx, argv + idx + 1);
+    options_set(curl, argv + idx, argv + idx + 1);
   }
 
   return janet_wrap_true();
@@ -1183,7 +1197,7 @@ static Janet share_setopt(int32_t argc, Janet *argv) {
   // Curl* curl = janet_getabstract(argv, 0, &curl_obj);
 
   // for (int32_t idx = 1; idx < argc; idx+=2){    
-  //   options_set(curl->curl, argv + idx, argv + idx + 1);
+  //   options_set(curl, argv + idx, argv + idx + 1);
   // }
 
   return janet_wrap_true();  
