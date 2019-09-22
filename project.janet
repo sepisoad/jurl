@@ -4,10 +4,9 @@
   :author "Sepehr Aryani"
   :license "GPLv3"
   :url "https://github.com/sepisoad/jurl"
-  :repo "https://github.com/sepisoad/jurl"
-  )
+  :repo "https://github.com/sepisoad/jurl")
 
 (declare-native
   :name "curl"
-  :lflags @["-lcurl" "-ljanet" "-shared" "-rdynamic" "-g"]
-  :source @["curl.c"])
+  :lflags ["-lcurl"]
+  :source ["src/curl.c"])
