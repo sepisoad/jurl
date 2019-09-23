@@ -557,6 +557,7 @@ static struct  {
   {"time-value", {CURLOPT_TIMEVALUE, JANET_NUMBER}},
   {"proxy-port", {CURLOPT_PROXYPORT, JANET_NUMBER}},
   {"post-field-size", {CURLOPT_POSTFIELDSIZE, JANET_NUMBER}},
+  {"post-fields", {CURLOPT_POSTFIELDS, JANET_STRING}},
   {"max-redirs", {CURLOPT_MAXREDIRS, JANET_NUMBER}},
   {"max-connects", {CURLOPT_MAXCONNECTS, JANET_NUMBER}},
   {"obsolete72", {CURLOPT_OBSOLETE72, JANET_NUMBER}},
@@ -623,7 +624,6 @@ static struct  {
   {"progress-data", {CURLOPT_PROGRESSDATA, JANET_POINTER}},
   {"http-header", {CURLOPT_HTTPHEADER, JANET_POINTER}},
   {"error-buffer@TODO", {CURLOPT_ERRORBUFFER, JANET_POINTER}}, // TODO
-  {"post-fields@TODO", {CURLOPT_POSTFIELDS, JANET_POINTER}}, // TODO
   {"http-post@TODO", {CURLOPT_HTTPPOST, JANET_POINTER}}, // TODO
   {"quote@TODO", {CURLOPT_QUOTE, JANET_POINTER}},   // TODO
   {"stderr@TODO", {CURLOPT_STDERR, JANET_POINTER}}, // TODO
