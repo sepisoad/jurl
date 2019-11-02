@@ -557,6 +557,7 @@ static struct  {
   {"time-value", {CURLOPT_TIMEVALUE, JANET_NUMBER}},
   {"proxy-port", {CURLOPT_PROXYPORT, JANET_NUMBER}},
   {"post-field-size", {CURLOPT_POSTFIELDSIZE, JANET_NUMBER}},
+  {"post-fields", {CURLOPT_POSTFIELDS, JANET_STRING}},
   {"max-redirs", {CURLOPT_MAXREDIRS, JANET_NUMBER}},
   {"max-connects", {CURLOPT_MAXCONNECTS, JANET_NUMBER}},
   {"obsolete72", {CURLOPT_OBSOLETE72, JANET_NUMBER}},
@@ -621,9 +622,8 @@ static struct  {
   {"header-data", {CURLOPT_HEADERDATA, JANET_POINTER}},
   {"read-data", {CURLOPT_READDATA, JANET_POINTER}},
   {"progress-data", {CURLOPT_PROGRESSDATA, JANET_POINTER}},
+  {"http-header", {CURLOPT_HTTPHEADER, JANET_POINTER}},
   {"error-buffer@TODO", {CURLOPT_ERRORBUFFER, JANET_POINTER}}, // TODO
-  {"post-fields@TODO", {CURLOPT_POSTFIELDS, JANET_POINTER}}, // TODO
-  {"http-header@TODO", {CURLOPT_HTTPHEADER, JANET_POINTER}}, // TODO
   {"http-post@TODO", {CURLOPT_HTTPPOST, JANET_POINTER}}, // TODO
   {"quote@TODO", {CURLOPT_QUOTE, JANET_POINTER}},   // TODO
   {"stderr@TODO", {CURLOPT_STDERR, JANET_POINTER}}, // TODO
@@ -680,6 +680,40 @@ static const MapCurlOptionToJanetType* options_get(const char* key) {
   return val;  
 }
 
+static struct curl_slist* fill_list_from_tuple(Janet tuple) {
+   const JanetTupleHead* t = janet_tuple_head(janet_unwrap_tuple(tuple));
+   if (t->length <= 0) {
+     janet_panic("input list cannot be empty");
+   }
+
+   const char* str1 = (const char*) janet_unwrap_string(t->data[0]);
+   struct curl_slist* list = curl_slist_append(NULL, str1);
+
+   for (int32_t idx = 1; idx < t->length; idx++){
+     const char* str = (const char*) janet_unwrap_string(t->data[idx]);
+     list = curl_slist_append(list, str);
+   }
+
+   return list;
+}
+
+static struct curl_slist* fill_list_from_array(Janet array) {
+   const JanetArray* a = janet_unwrap_array(array);
+   if (a->count <= 0) {
+     janet_panic("input list cannot be empty");
+   }
+
+   const char* str1 = (const char*) janet_unwrap_string(a->data[0]);
+   struct curl_slist* list = curl_slist_append(NULL, str1);
+
+   for (int32_t idx = 1; idx < a->count; idx++){
+     const char* str = (const char*) janet_unwrap_string(a->data[idx]);
+     list = curl_slist_append(list, str);
+   }
+
+   return list;
+}
+
 static void options_set(Curl* c, Janet* key, Janet* val) {    
   const char* keyword = (const char*) janet_unwrap_keyword(*key);
   const MapCurlOptionToJanetType* map = options_get(keyword);
@@ -725,7 +759,20 @@ static void options_set(Curl* c, Janet* key, Janet* val) {
 
       break;
     case JANET_POINTER:
-      janet_panic("not implemented yet");
+      if(0 == strcmp(keyword, "http-header")) {
+        struct curl_slist* list;
+        if (janet_checktype(*val, JANET_TUPLE) != 0) {
+          list = fill_list_from_tuple(*val);
+        } else if (janet_checktype(*val, JANET_ARRAY) != 0) {
+          list = fill_list_from_array(*val);
+        } else {
+          janet_panic("header must be an array or a tuple");
+        }
+
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
+      } else {
+       janet_panic("not implemented yet");
+      }
       // TODO:      
       break;
     default:
