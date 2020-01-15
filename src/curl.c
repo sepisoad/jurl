@@ -74,7 +74,7 @@ struct MimePart{
 //==============================================================================
 
 static int curl_gc_fn (void *data, size_t len);
-static Janet curl_get_fn (void *data, Janet key);
+static int curl_get_fn (void *data, Janet key, Janet *out);
 static Janet easy_init(int32_t argc, Janet *argv);
 static Janet easy_clone(int32_t argc, Janet *argv);
 static Janet easy_escape(int32_t argc, Janet *argv);
@@ -91,20 +91,20 @@ static Janet easy_query(int32_t argc, Janet *argv);
 
 static int curlsh_gc_fn (void *data, size_t len);
 static int curl_mark_fn (void *data, size_t len);
-static Janet curlsh_get_fn (void *data, Janet key);
+static int curlsh_get_fn (void *data, Janet key, Janet *out);
 static Janet share_init(int32_t argc, Janet *argv);
 static Janet share_setopt(int32_t argc, Janet *argv);
 static Janet share_strerror(int32_t argc, Janet *argv);
 
 static int url_gc_fn (void *data, size_t len);
-static Janet url_get_fn (void *data, Janet key);
+static int url_get_fn (void *data, Janet key, Janet *out);
 static Janet url_init(int32_t argc, Janet *argv);
 static Janet url_clone(int32_t argc, Janet *argv);
 static Janet url_get(int32_t argc, Janet *argv);
 static Janet url_set(int32_t argc, Janet *argv);
 
 static int mime_gc_fn (void *data, size_t len);
-static Janet mime_get_fn (void *data, Janet key);
+static int mime_get_fn (void *data, Janet key, Janet *out);
 static Janet mime_init(int32_t argc, Janet *argv);
 
 //==============================================================================
@@ -122,11 +122,11 @@ khash_t(HashMapCurlOptionToJanetType) *hashmap_opt_to_type = NULL;
 KHASH_MAP_INIT_STR(HashMapCurlInfoToJanetType, MapCurlInfoToJanetType*);
 khash_t(HashMapCurlInfoToJanetType) *hashmap_info_to_type = NULL;
 
-JanetAbstractType curl_obj = {"curl", curl_gc_fn, curl_mark_fn, curl_get_fn, NULL, NULL, NULL, NULL};
-JanetAbstractType curlsh_obj = {"curlsh", curlsh_gc_fn, NULL, curlsh_get_fn, NULL, NULL, NULL, NULL};
-JanetAbstractType url_obj = {"url", url_gc_fn, NULL, url_get_fn, NULL, NULL, NULL, NULL};
-JanetAbstractType mime_obj = {"mime", mime_gc_fn, NULL, mime_get_fn, NULL, NULL, NULL, NULL};
-JanetAbstractType mimepart_obj = {"mimepart", NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+JanetAbstractType curl_obj = {"curl", curl_gc_fn, curl_mark_fn, curl_get_fn, NULL, NULL, NULL, NULL, NULL, NULL};
+JanetAbstractType curlsh_obj = {"curlsh", curlsh_gc_fn, NULL, curlsh_get_fn, NULL, NULL, NULL, NULL, NULL, NULL};
+JanetAbstractType url_obj = {"url", url_gc_fn, NULL, url_get_fn, NULL, NULL, NULL, NULL, NULL, NULL};
+JanetAbstractType mime_obj = {"mime", mime_gc_fn, NULL, mime_get_fn, NULL, NULL, NULL, NULL, NULL, NULL};
+JanetAbstractType mimepart_obj = {"mimepart", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 static JanetMethod curl_methods[] = {  
   {"clone", easy_clone},
@@ -195,12 +195,12 @@ static int curl_mark_fn (void *data, size_t len) {
   return 0;
 }
 
-static Janet curl_get_fn (void *data, Janet key) {
+static int curl_get_fn (void *data, Janet key, Janet *out) {
   (void) data;
 
   if (!janet_checktype(key, JANET_KEYWORD))
     janet_panicf("expected keyword, got %v", key);
-  return janet_getmethod(janet_unwrap_keyword(key), curl_methods);
+  return janet_getmethod(janet_unwrap_keyword(key), curl_methods, out);
 }
 
 static Janet curlsh_make(CURLSH *curlsh) {
@@ -218,12 +218,12 @@ static int curlsh_gc_fn (void *data, size_t len) {
   return 0;
 }
 
-static Janet curlsh_get_fn (void *data, Janet key) {
+static int curlsh_get_fn (void *data, Janet key, Janet *out) {
   (void) data;
 
   if (!janet_checktype(key, JANET_KEYWORD))
     janet_panicf("expected keyword, got %v", key);
-  return janet_getmethod(janet_unwrap_keyword(key), curlsh_methods);
+  return janet_getmethod(janet_unwrap_keyword(key), curlsh_methods, out);
 }
 
 static Janet url_make(CURLU* url) {
@@ -241,12 +241,12 @@ static int url_gc_fn (void *data, size_t len) {
   return 0;
 }
 
-static Janet url_get_fn (void *data, Janet key) {
+static int url_get_fn (void *data, Janet key, Janet *out) {
   (void) data;
 
   if (!janet_checktype(key, JANET_KEYWORD))
     janet_panicf("expected keyword, got %v", key);
-  return janet_getmethod(janet_unwrap_keyword(key), url_methods);
+  return janet_getmethod(janet_unwrap_keyword(key), url_methods, out);
 }
 
 static Janet mime_make(curl_mime* mime) {
@@ -264,12 +264,12 @@ static int mime_gc_fn (void *data, size_t len) {
   return 0;
 }
 
-static Janet mime_get_fn (void *data, Janet key) {
+static int mime_get_fn (void *data, Janet key, Janet *out) {
   (void) data;
 
   if (!janet_checktype(key, JANET_KEYWORD))
     janet_panicf("expected keyword, got %v", key);
-  return janet_getmethod(janet_unwrap_keyword(key), mime_methods);
+  return janet_getmethod(janet_unwrap_keyword(key), mime_methods, out);
 }
 
 static Janet mimepart_make(curl_mimepart* mimepart) {
