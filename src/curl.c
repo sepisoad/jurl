@@ -122,11 +122,11 @@ khash_t(HashMapCurlOptionToJanetType) *hashmap_opt_to_type = NULL;
 KHASH_MAP_INIT_STR(HashMapCurlInfoToJanetType, MapCurlInfoToJanetType*);
 khash_t(HashMapCurlInfoToJanetType) *hashmap_info_to_type = NULL;
 
-JanetAbstractType curl_obj = {"curl", curl_gc_fn, curl_mark_fn, curl_get_fn, NULL, NULL, NULL, NULL, NULL, NULL};
-JanetAbstractType curlsh_obj = {"curlsh", curlsh_gc_fn, NULL, curlsh_get_fn, NULL, NULL, NULL, NULL, NULL, NULL};
-JanetAbstractType url_obj = {"url", url_gc_fn, NULL, url_get_fn, NULL, NULL, NULL, NULL, NULL, NULL};
-JanetAbstractType mime_obj = {"mime", mime_gc_fn, NULL, mime_get_fn, NULL, NULL, NULL, NULL, NULL, NULL};
-JanetAbstractType mimepart_obj = {"mimepart", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+JanetAbstractType curl_obj = {"curl", curl_gc_fn, curl_mark_fn, curl_get_fn, JANET_ATEND_GET};
+JanetAbstractType curlsh_obj = {"curlsh", curlsh_gc_fn, NULL, curlsh_get_fn, JANET_ATEND_GET};
+JanetAbstractType url_obj = {"url", url_gc_fn, NULL, url_get_fn, JANET_ATEND_GET};
+JanetAbstractType mime_obj = {"mime", mime_gc_fn, NULL, mime_get_fn, JANET_ATEND_GET};
+JanetAbstractType mimepart_obj = {"mimepart", JANET_ATEND_NAME};
 
 static JanetMethod curl_methods[] = {  
   {"clone", easy_clone},
