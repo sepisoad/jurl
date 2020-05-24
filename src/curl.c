@@ -41,7 +41,7 @@ struct MapCurlInfoToJanetType {
 };
 
 struct Curl {
-    CURL* curl;
+    CURL *curl;
     JanetFunction *write_function;
     JanetFunction *header_function;
     JanetFunction *read_function;
@@ -49,19 +49,19 @@ struct Curl {
 };
 
 struct Curlsh {
-    CURLSH* curlsh;
+    CURLSH *curlsh;
 };
 
 struct Url {
-    CURLU* url;
+    CURLU *url;
 };
 
 struct Mime {
-    curl_mime* mime;
+    curl_mime *mime;
 };
 
 struct MimePart {
-    curl_mimepart* mimepart;
+    curl_mimepart *mimepart;
 };
 
 //==============================================================================
@@ -73,8 +73,8 @@ struct MimePart {
 // ╚═╝     ╚═╝  ╚═╝ ╚═════╝    ╚═╝    ╚═════╝    ╚═╝      ╚═╝   ╚═╝     ╚══════╝╚══════╝
 //==============================================================================
 
-static int curl_gc_fn (void *data, size_t len);
-static int curl_get_fn (void *data, Janet key, Janet *out);
+static int curl_gc_fn(void *data, size_t len);
+static int curl_get_fn(void *data, Janet key, Janet *out);
 static Janet easy_init(int32_t argc, Janet *argv);
 static Janet easy_clone(int32_t argc, Janet *argv);
 static Janet easy_escape(int32_t argc, Janet *argv);
@@ -89,22 +89,22 @@ static Janet easy_send(int32_t argc, Janet *argv);
 static Janet easy_perform(int32_t argc, Janet *argv);
 static Janet easy_query(int32_t argc, Janet *argv);
 
-static int curlsh_gc_fn (void *data, size_t len);
-static int curl_mark_fn (void *data, size_t len);
-static int curlsh_get_fn (void *data, Janet key, Janet *out);
+static int curlsh_gc_fn(void *data, size_t len);
+static int curl_mark_fn(void *data, size_t len);
+static int curlsh_get_fn(void *data, Janet key, Janet *out);
 static Janet share_init(int32_t argc, Janet *argv);
 static Janet share_setopt(int32_t argc, Janet *argv);
 static Janet share_strerror(int32_t argc, Janet *argv);
 
-static int url_gc_fn (void *data, size_t len);
-static int url_get_fn (void *data, Janet key, Janet *out);
+static int url_gc_fn(void *data, size_t len);
+static int url_get_fn(void *data, Janet key, Janet *out);
 static Janet url_init(int32_t argc, Janet *argv);
 static Janet url_clone(int32_t argc, Janet *argv);
 static Janet url_get(int32_t argc, Janet *argv);
 static Janet url_set(int32_t argc, Janet *argv);
 
-static int mime_gc_fn (void *data, size_t len);
-static int mime_get_fn (void *data, Janet key, Janet *out);
+static int mime_gc_fn(void *data, size_t len);
+static int mime_get_fn(void *data, Janet key, Janet *out);
 static Janet mime_init(int32_t argc, Janet *argv);
 
 //==============================================================================
@@ -116,10 +116,10 @@ static Janet mime_init(int32_t argc, Janet *argv);
 //  ╚═════╝ ╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝
 //==============================================================================
 
-KHASH_MAP_INIT_STR(HashMapCurlOptionToJanetType, MapCurlOptionToJanetType*);
+KHASH_MAP_INIT_STR(HashMapCurlOptionToJanetType, MapCurlOptionToJanetType *);
 khash_t(HashMapCurlOptionToJanetType) *hashmap_opt_to_type = NULL;
 
-KHASH_MAP_INIT_STR(HashMapCurlInfoToJanetType, MapCurlInfoToJanetType*);
+KHASH_MAP_INIT_STR(HashMapCurlInfoToJanetType, MapCurlInfoToJanetType *);
 khash_t(HashMapCurlInfoToJanetType) *hashmap_info_to_type = NULL;
 
 JanetAbstractType curl_obj = {"curl", curl_gc_fn, curl_mark_fn, curl_get_fn, JANET_ATEND_GET};
@@ -169,25 +169,25 @@ static JanetMethod mime_methods[] = { // FIXME:
 //==============================================================================
 
 static Janet curl_make(CURL *curl) {
-    Curl* c = (Curl*) janet_abstract(&curl_obj, sizeof(Curl));
+    Curl *c = (Curl *) janet_abstract(&curl_obj, sizeof(Curl));
     memset(c, 0, sizeof(Curl));
     c->curl = curl;
     return janet_wrap_abstract(c);
 }
 
-static int curl_gc_fn (void *data, size_t len) {
+static int curl_gc_fn(void *data, size_t len) {
     (void) len;
 
-    Curl* c = (Curl*)data;
+    Curl *c = (Curl *)data;
     curl_easy_cleanup(c->curl);
 
     return 0;
 }
 
-static int curl_mark_fn (void *data, size_t len) {
+static int curl_mark_fn(void *data, size_t len) {
     (void) len;
 
-    Curl* c = (Curl*)data;
+    Curl *c = (Curl *)data;
     if (c->read_function) janet_mark(janet_wrap_function(c->read_function));
     if (c->write_function) janet_mark(janet_wrap_function(c->write_function));
     if (c->progress_function) janet_mark(janet_wrap_function(c->progress_function));
@@ -195,7 +195,7 @@ static int curl_mark_fn (void *data, size_t len) {
     return 0;
 }
 
-static int curl_get_fn (void *data, Janet key, Janet *out) {
+static int curl_get_fn(void *data, Janet key, Janet *out) {
     (void) data;
 
     if (!janet_checktype(key, JANET_KEYWORD))
@@ -204,21 +204,21 @@ static int curl_get_fn (void *data, Janet key, Janet *out) {
 }
 
 static Janet curlsh_make(CURLSH *curlsh) {
-    Curlsh* c = (Curlsh*) janet_abstract(&curl_obj, sizeof(Curlsh));
+    Curlsh *c = (Curlsh *) janet_abstract(&curl_obj, sizeof(Curlsh));
     c->curlsh = curlsh;
     return janet_wrap_abstract(c);
 }
 
-static int curlsh_gc_fn (void *data, size_t len) {
+static int curlsh_gc_fn(void *data, size_t len) {
     (void) len;
 
-    Curlsh* c = (Curlsh*)data;
+    Curlsh *c = (Curlsh *)data;
     curl_share_cleanup(c->curlsh);
 
     return 0;
 }
 
-static int curlsh_get_fn (void *data, Janet key, Janet *out) {
+static int curlsh_get_fn(void *data, Janet key, Janet *out) {
     (void) data;
 
     if (!janet_checktype(key, JANET_KEYWORD))
@@ -226,22 +226,22 @@ static int curlsh_get_fn (void *data, Janet key, Janet *out) {
     return janet_getmethod(janet_unwrap_keyword(key), curlsh_methods, out);
 }
 
-static Janet url_make(CURLU* url) {
-    Url* u = (Url*) janet_abstract(&url_obj, sizeof(Url));
+static Janet url_make(CURLU *url) {
+    Url *u = (Url *) janet_abstract(&url_obj, sizeof(Url));
     u->url = url;
     return janet_wrap_abstract(u);
 }
 
-static int url_gc_fn (void *data, size_t len) {
+static int url_gc_fn(void *data, size_t len) {
     (void) len;
 
-    Url* u = (Url*)data;
+    Url *u = (Url *)data;
     curl_url_cleanup(u->url);
 
     return 0;
 }
 
-static int url_get_fn (void *data, Janet key, Janet *out) {
+static int url_get_fn(void *data, Janet key, Janet *out) {
     (void) data;
 
     if (!janet_checktype(key, JANET_KEYWORD))
@@ -249,22 +249,22 @@ static int url_get_fn (void *data, Janet key, Janet *out) {
     return janet_getmethod(janet_unwrap_keyword(key), url_methods, out);
 }
 
-static Janet mime_make(curl_mime* mime) {
-    Mime* m = (Mime*) janet_abstract(&mime_obj, sizeof(Mime));
+static Janet mime_make(curl_mime *mime) {
+    Mime *m = (Mime *) janet_abstract(&mime_obj, sizeof(Mime));
     m->mime = mime;
     return janet_wrap_abstract(m);
 }
 
-static int mime_gc_fn (void *data, size_t len) {
+static int mime_gc_fn(void *data, size_t len) {
     (void) len;
 
-    Mime* m = (Mime*)data;
+    Mime *m = (Mime *)data;
     curl_mime_free(m->mime);
 
     return 0;
 }
 
-static int mime_get_fn (void *data, Janet key, Janet *out) {
+static int mime_get_fn(void *data, Janet key, Janet *out) {
     (void) data;
 
     if (!janet_checktype(key, JANET_KEYWORD))
@@ -272,8 +272,8 @@ static int mime_get_fn (void *data, Janet key, Janet *out) {
     return janet_getmethod(janet_unwrap_keyword(key), mime_methods, out);
 }
 
-static Janet mimepart_make(curl_mimepart* mimepart) {
-    MimePart* mp = (MimePart*) janet_abstract(&mimepart_obj, sizeof(MimePart));
+static Janet mimepart_make(curl_mimepart *mimepart) {
+    MimePart *mp = (MimePart *) janet_abstract(&mimepart_obj, sizeof(MimePart));
     mp->mimepart = mimepart;
     return janet_wrap_abstract(mp);
 }
@@ -291,11 +291,11 @@ static size_t funcs_write(void *buff, size_t size, size_t count, void *udata) {
     const size_t len = size * count;
 
     if (len > 0 && buff != NULL) {
-        JanetBuffer* jbuff = janet_buffer(len);
+        JanetBuffer *jbuff = janet_buffer(len);
         janet_buffer_push_bytes(jbuff, buff, len);
         Janet arg = janet_wrap_buffer(jbuff);
 
-        JanetFunction* jfunc = (JanetFunction *)udata;
+        JanetFunction *jfunc = (JanetFunction *)udata;
         janet_call(jfunc, 1, &arg);
     }
 
@@ -304,7 +304,7 @@ static size_t funcs_write(void *buff, size_t size, size_t count, void *udata) {
 
 static size_t funcs_read(char *buff, size_t size, size_t count, void *udata) {
     Janet len = janet_wrap_number(size * count);
-    JanetFunction* jfunc = (JanetFunction *)udata;
+    JanetFunction *jfunc = (JanetFunction *)udata;
     Janet jbuff = janet_call(jfunc, 1, &len);
     JanetByteView bytes = janet_getbytes(&jbuff, 0);
     if ((size_t) bytes.len > size) bytes.len = (int32_t) size;
@@ -313,7 +313,7 @@ static size_t funcs_read(char *buff, size_t size, size_t count, void *udata) {
 }
 
 static int funcs_progress(void *udata, double dltotal, double dlnow, double ultotal, double ulnow) {
-    JanetFunction* jfunc = (JanetFunction *)udata;
+    JanetFunction *jfunc = (JanetFunction *)udata;
     Janet args[4];
     args[0] = janet_wrap_number(dltotal);
     args[1] = janet_wrap_number(dlnow);
@@ -673,50 +673,50 @@ static void options_gen_dict(void) {
     }
 }
 
-static const MapCurlOptionToJanetType* options_get(const char* key) {
-    MapCurlOptionToJanetType* val;
+static const MapCurlOptionToJanetType *options_get(const char *key) {
+    MapCurlOptionToJanetType *val;
     khint_t where = kh_get(HashMapCurlOptionToJanetType, hashmap_opt_to_type, key);
     val = kh_val(hashmap_opt_to_type, where);
     return val;
 }
 
-static struct curl_slist* fill_list_from_tuple(Janet tuple) {
-    const JanetTupleHead* t = janet_tuple_head(janet_unwrap_tuple(tuple));
+static struct curl_slist *fill_list_from_tuple(Janet tuple) {
+    const JanetTupleHead *t = janet_tuple_head(janet_unwrap_tuple(tuple));
     if (t->length <= 0) {
         janet_panic("input list cannot be empty");
     }
 
-    const char* str1 = (const char*) janet_unwrap_string(t->data[0]);
-    struct curl_slist* list = curl_slist_append(NULL, str1);
+    const char *str1 = (const char *) janet_unwrap_string(t->data[0]);
+    struct curl_slist *list = curl_slist_append(NULL, str1);
 
     for (int32_t idx = 1; idx < t->length; idx++) {
-        const char* str = (const char*) janet_unwrap_string(t->data[idx]);
+        const char *str = (const char *) janet_unwrap_string(t->data[idx]);
         list = curl_slist_append(list, str);
     }
 
     return list;
 }
 
-static struct curl_slist* fill_list_from_array(Janet array) {
-    const JanetArray* a = janet_unwrap_array(array);
+static struct curl_slist *fill_list_from_array(Janet array) {
+    const JanetArray *a = janet_unwrap_array(array);
     if (a->count <= 0) {
         janet_panic("input list cannot be empty");
     }
 
-    const char* str1 = (const char*) janet_unwrap_string(a->data[0]);
-    struct curl_slist* list = curl_slist_append(NULL, str1);
+    const char *str1 = (const char *) janet_unwrap_string(a->data[0]);
+    struct curl_slist *list = curl_slist_append(NULL, str1);
 
     for (int32_t idx = 1; idx < a->count; idx++) {
-        const char* str = (const char*) janet_unwrap_string(a->data[idx]);
+        const char *str = (const char *) janet_unwrap_string(a->data[idx]);
         list = curl_slist_append(list, str);
     }
 
     return list;
 }
 
-static void options_set(Curl* c, Janet* key, Janet* val) {
-    const char* keyword = (const char*) janet_unwrap_keyword(*key);
-    const MapCurlOptionToJanetType* map = options_get(keyword);
+static void options_set(Curl *c, Janet *key, Janet *val) {
+    const char *keyword = (const char *) janet_unwrap_keyword(*key);
+    const MapCurlOptionToJanetType *map = options_get(keyword);
     CURL *curl = c->curl;
     if (NULL == map) {
         janet_panic("invalid keyword");
@@ -726,58 +726,58 @@ static void options_set(Curl* c, Janet* key, Janet* val) {
     int opt = map->option;
     JanetFunction *fn;
 
-    switch(type) {
-    case JANET_NUMBER:
-        if (!janet_checkint(*val)) janet_panicf("expected integer, got %v", *val);
-        curl_easy_setopt(curl, opt, janet_unwrap_integer(*val));
-        break;
-    case JANET_BOOLEAN:
-        curl_easy_setopt(curl, opt, janet_unwrap_boolean(*val));
-        break;
-    case JANET_STRING:
-        curl_easy_setopt(curl, opt, janet_unwrap_string(*val));
-        break;
-    case JANET_FUNCTION:
-        fn = janet_unwrap_function(*val);
-        if(0 == strcmp(keyword, "write-function")) {
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)fn);
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, funcs_write);
-            c->write_function = fn;
-        } else if(0 == strcmp(keyword, "header-function")) {
-            curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void*)fn);
-            curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, funcs_write);
-            c->header_function = fn;
-        } else if(0 == strcmp(keyword, "read-function")) {
-            curl_easy_setopt(curl, CURLOPT_READDATA, (void*)fn);
-            curl_easy_setopt(curl, CURLOPT_READFUNCTION, funcs_read);
-            c->read_function = fn;
-        } else if(0 == strcmp(keyword, "progress-function")) {
-            curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, (void*)fn);
-            curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, funcs_progress);
-            c->progress_function = fn;
-        }
-
-        break;
-    case JANET_POINTER:
-        if(0 == strcmp(keyword, "http-header")) {
-            struct curl_slist* list;
-            if (janet_checktype(*val, JANET_TUPLE) != 0) {
-                list = fill_list_from_tuple(*val);
-            } else if (janet_checktype(*val, JANET_ARRAY) != 0) {
-                list = fill_list_from_array(*val);
-            } else {
-                janet_panic("header must be an array or a tuple");
+    switch (type) {
+        case JANET_NUMBER:
+            if (!janet_checkint(*val)) janet_panicf("expected integer, got %v", *val);
+            curl_easy_setopt(curl, opt, janet_unwrap_integer(*val));
+            break;
+        case JANET_BOOLEAN:
+            curl_easy_setopt(curl, opt, janet_unwrap_boolean(*val));
+            break;
+        case JANET_STRING:
+            curl_easy_setopt(curl, opt, janet_unwrap_string(*val));
+            break;
+        case JANET_FUNCTION:
+            fn = janet_unwrap_function(*val);
+            if (0 == strcmp(keyword, "write-function")) {
+                curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)fn);
+                curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, funcs_write);
+                c->write_function = fn;
+            } else if (0 == strcmp(keyword, "header-function")) {
+                curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *)fn);
+                curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, funcs_write);
+                c->header_function = fn;
+            } else if (0 == strcmp(keyword, "read-function")) {
+                curl_easy_setopt(curl, CURLOPT_READDATA, (void *)fn);
+                curl_easy_setopt(curl, CURLOPT_READFUNCTION, funcs_read);
+                c->read_function = fn;
+            } else if (0 == strcmp(keyword, "progress-function")) {
+                curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, (void *)fn);
+                curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, funcs_progress);
+                c->progress_function = fn;
             }
 
-            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
-        } else {
-            janet_panic("not implemented yet");
-        }
-        // TODO:
-        break;
-    default:
-        janet_panic("value type is not supported");
-        break;
+            break;
+        case JANET_POINTER:
+            if (0 == strcmp(keyword, "http-header")) {
+                struct curl_slist *list;
+                if (janet_checktype(*val, JANET_TUPLE) != 0) {
+                    list = fill_list_from_tuple(*val);
+                } else if (janet_checktype(*val, JANET_ARRAY) != 0) {
+                    list = fill_list_from_array(*val);
+                } else {
+                    janet_panic("header must be an array or a tuple");
+                }
+
+                curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
+            } else {
+                janet_panic("not implemented yet");
+            }
+            // TODO:
+            break;
+        default:
+            janet_panic("value type is not supported");
+            break;
     };
 }
 
@@ -876,16 +876,16 @@ static void info_gen_dict(void) {
     }
 }
 
-static const MapCurlInfoToJanetType* info_get(const char* key) {
-    MapCurlInfoToJanetType* val;
+static const MapCurlInfoToJanetType *info_get(const char *key) {
+    MapCurlInfoToJanetType *val;
     khint_t where = kh_get(HashMapCurlInfoToJanetType, hashmap_info_to_type, key);
     val = kh_val(hashmap_info_to_type, where);
     return val;
 }
 
-static Janet info_query(CURL* curl, Janet* key) {
-    const char* keyword = (const char*) janet_unwrap_keyword(*key);
-    const MapCurlInfoToJanetType* map = info_get(keyword);
+static Janet info_query(CURL *curl, Janet *key) {
+    const char *keyword = (const char *) janet_unwrap_keyword(*key);
+    const MapCurlInfoToJanetType *map = info_get(keyword);
     if (NULL == map) {
         janet_panic("invalid keyword");
     }
@@ -894,22 +894,22 @@ static Janet info_query(CURL* curl, Janet* key) {
     int info = map->info;
 
     int32_t res_number;
-    const char* res_string;
+    const char *res_string;
 
-    switch(type) {
-    case JANET_NUMBER:
-        if(CURLE_OK == curl_easy_getinfo(curl, info, &res_number)) {
-            return janet_wrap_integer(res_number);
-        }
-        break;
-    case JANET_STRING:
-        if(CURLE_OK == curl_easy_getinfo(curl, info, &res_string)) {
-            return janet_wrap_string((const char*)res_string);
-        }
-        break;
-    default:
-        janet_panic("value type is not supported");
-        break;
+    switch (type) {
+        case JANET_NUMBER:
+            if (CURLE_OK == curl_easy_getinfo(curl, info, &res_number)) {
+                return janet_wrap_integer(res_number);
+            }
+            break;
+        case JANET_STRING:
+            if (CURLE_OK == curl_easy_getinfo(curl, info, &res_string)) {
+                return janet_wrap_string((const char *)res_string);
+            }
+            break;
+        default:
+            janet_panic("value type is not supported");
+            break;
     };
 
     return janet_wrap_false();
@@ -928,15 +928,15 @@ static Janet easy_init(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 0);
     (void)argv;
 
-    CURL* curl = curl_easy_init();
+    CURL *curl = curl_easy_init();
     return curl ? curl_make(curl) : janet_wrap_nil();
 }
 
 static Janet easy_clone(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 1);
 
-    Curl* curl = janet_getabstract(argv, 0, &curl_obj);
-    CURL* clone = curl_easy_duphandle(curl->curl);
+    Curl *curl = janet_getabstract(argv, 0, &curl_obj);
+    CURL *clone = curl_easy_duphandle(curl->curl);
 
     return clone ? curl_make(clone) : janet_wrap_nil();
 }
@@ -944,8 +944,8 @@ static Janet easy_clone(int32_t argc, Janet *argv) {
 static Janet easy_escape(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
 
-    Curl* curl = janet_getabstract(argv, 0, &curl_obj);
-    const char* iurl = janet_getcstring(argv, 1);
+    Curl *curl = janet_getabstract(argv, 0, &curl_obj);
+    const char *iurl = janet_getcstring(argv, 1);
     if (NULL == iurl) {
         janet_panic("input url string is invalid or null");
     }
@@ -955,7 +955,7 @@ static Janet easy_escape(int32_t argc, Janet *argv) {
         janet_panic("input url cannot be empty");
     }
 
-    char* ourl = curl_easy_escape(curl->curl, iurl, len);
+    char *ourl = curl_easy_escape(curl->curl, iurl, len);
     if (NULL == ourl) {
         curl_free(ourl);
         return janet_wrap_false();
@@ -970,8 +970,8 @@ static Janet easy_escape(int32_t argc, Janet *argv) {
 static Janet easy_unescape(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
 
-    Curl* curl = janet_getabstract(argv, 0, &curl_obj);
-    const char* iurl = janet_getcstring(argv, 1);
+    Curl *curl = janet_getabstract(argv, 0, &curl_obj);
+    const char *iurl = janet_getcstring(argv, 1);
     if (NULL == iurl) {
         janet_panic("input url string is invalid or null");
     }
@@ -983,7 +983,7 @@ static Janet easy_unescape(int32_t argc, Janet *argv) {
 
     int olen = 0;
 
-    char* ourl = curl_easy_unescape(curl->curl, iurl, ilen, &olen);
+    char *ourl = curl_easy_unescape(curl->curl, iurl, ilen, &olen);
     if (NULL == ourl || 0 >= olen) {
         return janet_wrap_false();
     }
@@ -999,7 +999,7 @@ static Janet easy_strerror(int32_t argc, Janet *argv) {
 
     int code = janet_getinteger(argv, 0);
 
-    const char* errstr = curl_easy_strerror(code);
+    const char *errstr = curl_easy_strerror(code);
     Janet res = janet_cstringv(errstr);
 
     return res;
@@ -1012,9 +1012,9 @@ static Janet easy_setopt(int32_t argc, Janet *argv) {
         janet_panic("options count must be even, options are regarded as tuple");
     }
 
-    Curl* curl = janet_getabstract(argv, 0, &curl_obj);
+    Curl *curl = janet_getabstract(argv, 0, &curl_obj);
 
-    for (int32_t idx = 1; idx < argc; idx+=2) {
+    for (int32_t idx = 1; idx < argc; idx += 2) {
         options_set(curl, argv + idx, argv + idx + 1);
     }
 
@@ -1024,15 +1024,15 @@ static Janet easy_setopt(int32_t argc, Janet *argv) {
 static Janet easy_pause(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
 
-    Curl* curl = janet_getabstract(argv, 0, &curl_obj);
-    const char* modestr = (const char*) janet_getkeyword(argv, 1);
+    Curl *curl = janet_getabstract(argv, 0, &curl_obj);
+    const char *modestr = (const char *) janet_getkeyword(argv, 1);
 
     int mode = -1;
     if (0 == strcmp(modestr, "pause-mode-recv")) {
         mode = CURLPAUSE_RECV;
     } else if (0 == strcmp(modestr, "pause-mode-send")) {
         mode = CURLPAUSE_SEND;
-    } else if (0 == strcmp(modestr,"paus-modee-all")) {
+    } else if (0 == strcmp(modestr, "paus-modee-all")) {
         mode = CURLPAUSE_ALL;
     } else if (0 == strcmp(modestr, "pause-mode-cont")) {
         mode = CURLPAUSE_CONT;
@@ -1047,7 +1047,7 @@ static Janet easy_pause(int32_t argc, Janet *argv) {
 static Janet easy_reset(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 1);
 
-    Curl* curl = janet_getabstract(argv, 0, &curl_obj);
+    Curl *curl = janet_getabstract(argv, 0, &curl_obj);
 
     curl_easy_reset(curl->curl);
     return janet_wrap_nil();
@@ -1056,7 +1056,7 @@ static Janet easy_reset(int32_t argc, Janet *argv) {
 static Janet easy_upkeep(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 1);
 
-    Curl* curl = janet_getabstract(argv, 0, &curl_obj);
+    Curl *curl = janet_getabstract(argv, 0, &curl_obj);
 
     curl_easy_upkeep(curl->curl);
     return janet_wrap_nil();
@@ -1065,7 +1065,7 @@ static Janet easy_upkeep(int32_t argc, Janet *argv) {
 static Janet easy_recv(int32_t argc, Janet *argv) {
     janet_arity(argc, 1, 2);
 
-    Curl* curl = janet_getabstract(argv, 0, &curl_obj);
+    Curl *curl = janet_getabstract(argv, 0, &curl_obj);
 
     size_t buflen = DEFAULT_EASY_RECV_BUF_LEN;
     size_t recvlen = -1;
@@ -1073,10 +1073,10 @@ static Janet easy_recv(int32_t argc, Janet *argv) {
         buflen = janet_getinteger(argv, 1);
     }
 
-    char* buffer = (char*) calloc(buflen, sizeof(char));
+    char *buffer = (char *) calloc(buflen, sizeof(char));
     int res = curl_easy_recv(curl->curl, buffer, buflen, &recvlen);
-    JanetBuffer* jbuff = janet_buffer(buflen);
-    janet_buffer_push_bytes(jbuff, (const uint8_t*)buffer, buflen);
+    JanetBuffer *jbuff = janet_buffer(buflen);
+    janet_buffer_push_bytes(jbuff, (const uint8_t *)buffer, buflen);
     free(buffer);
 
     // TODO: i am not satisfied with this function
@@ -1086,24 +1086,24 @@ static Janet easy_recv(int32_t argc, Janet *argv) {
     }
 
     switch (res) {
-    case CURLE_OK:
-        return janet_wrap_buffer(jbuff);
-        break;
-    case CURLE_AGAIN:
-        return janet_ckeywordv("more");
-        break;
-    case CURLE_UNSUPPORTED_PROTOCOL:
-        return janet_ckeywordv("unsopported");
-        break;
-    default:
-        return janet_wrap_false();
+        case CURLE_OK:
+            return janet_wrap_buffer(jbuff);
+            break;
+        case CURLE_AGAIN:
+            return janet_ckeywordv("more");
+            break;
+        case CURLE_UNSUPPORTED_PROTOCOL:
+            return janet_ckeywordv("unsopported");
+            break;
+        default:
+            return janet_wrap_false();
     }
 }
 
 static Janet easy_send(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
 
-    Curl* curl = janet_getabstract(argv, 0, &curl_obj);
+    Curl *curl = janet_getabstract(argv, 0, &curl_obj);
 
     size_t sendlen = -1;
     JanetByteView buffer = janet_getbytes(argv, 1);
@@ -1111,24 +1111,24 @@ static Janet easy_send(int32_t argc, Janet *argv) {
     int res = curl_easy_send(curl->curl, buffer.bytes, buffer.len, &sendlen);
 
     switch (res) {
-    case CURLE_OK:
-        return janet_wrap_true();
-        break;
-    case CURLE_AGAIN:
-        return janet_ckeywordv("more");
-        break;
-    case CURLE_UNSUPPORTED_PROTOCOL:
-        return janet_ckeywordv("unsopported");
-        break;
-    default:
-        return janet_wrap_false();
+        case CURLE_OK:
+            return janet_wrap_true();
+            break;
+        case CURLE_AGAIN:
+            return janet_ckeywordv("more");
+            break;
+        case CURLE_UNSUPPORTED_PROTOCOL:
+            return janet_ckeywordv("unsopported");
+            break;
+        default:
+            return janet_wrap_false();
     }
 }
 
 static Janet easy_perform(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 1);
 
-    Curl* curl = janet_getabstract(argv, 0, &curl_obj);
+    Curl *curl = janet_getabstract(argv, 0, &curl_obj);
 
     CURLcode res;
     res = curl_easy_perform(curl->curl);
@@ -1138,7 +1138,7 @@ static Janet easy_perform(int32_t argc, Janet *argv) {
 static Janet easy_query(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
 
-    Curl* curl = janet_getabstract(argv, 0, &curl_obj);
+    Curl *curl = janet_getabstract(argv, 0, &curl_obj);
 
     return info_query(curl->curl, argv + 1);
 }
@@ -1229,7 +1229,7 @@ static Janet share_init(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 0);
     (void)argv;
 
-    CURLSH* curlsh = curl_share_init();
+    CURLSH *curlsh = curl_share_init();
     return curlsh ? curlsh_make(curlsh) : janet_wrap_nil();
 }
 
@@ -1257,7 +1257,7 @@ static Janet share_strerror(int32_t argc, Janet *argv) {
 
     int code = janet_getinteger(argv, 0);
 
-    const char* errstr = curl_share_strerror(code);
+    const char *errstr = curl_share_strerror(code);
     Janet res = janet_cstringv(errstr);
 
     return res;
@@ -1299,15 +1299,15 @@ static Janet url_init(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 0);
     (void)argv;
 
-    CURLU* url = curl_url();
+    CURLU *url = curl_url();
     return url ? url_make(url) : janet_wrap_nil();
 }
 
 static Janet url_clone(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 1);
 
-    Url* url = janet_getabstract(argv, 0, &url_obj);
-    CURLU* clone = curl_url_dup(url->url);
+    Url *url = janet_getabstract(argv, 0, &url_obj);
+    CURLU *clone = curl_url_dup(url->url);
 
     return clone ? url_make(clone) : janet_wrap_nil();
 }
@@ -1315,9 +1315,9 @@ static Janet url_clone(int32_t argc, Janet *argv) {
 static Janet url_get(int32_t argc, Janet *argv) {
     janet_arity(argc, 2, 3);
 
-    Url* url = janet_getabstract(argv, 0, &url_obj);
+    Url *url = janet_getabstract(argv, 0, &url_obj);
     const uint32_t part = janet_getinteger(argv, 1);
-    char* extracted;
+    char *extracted;
     uint32_t flag = 0;
 
     if (3 == argc) {
@@ -1336,9 +1336,9 @@ static Janet url_get(int32_t argc, Janet *argv) {
 static Janet url_set(int32_t argc, Janet *argv) {
     janet_arity(argc, 3, 4);
 
-    Url* url = janet_getabstract(argv, 0, &url_obj);
+    Url *url = janet_getabstract(argv, 0, &url_obj);
     const uint32_t part = janet_getinteger(argv, 1);
-    const char* extracted = janet_getcstring(argv, 2);
+    const char *extracted = janet_getcstring(argv, 2);
     uint32_t flag = 0;
 
     if (4 == argc) {
@@ -1392,8 +1392,8 @@ static void submod_url(JanetTable *env) {
 static Janet mime_init(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 1);
 
-    Curl* curl = janet_getabstract(argv, 0, &curl_obj);
-    curl_mime* mime = curl_mime_init(curl->curl);
+    Curl *curl = janet_getabstract(argv, 0, &curl_obj);
+    curl_mime *mime = curl_mime_init(curl->curl);
 
     return mime ? mime_make(mime) : janet_wrap_nil();
 }
@@ -1401,8 +1401,8 @@ static Janet mime_init(int32_t argc, Janet *argv) {
 static Janet mime_part(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 1);
 
-    Mime* mime = janet_getabstract(argv, 0, &curl_obj);
-    curl_mimepart* mimepart = curl_mime_addpart(mime->mime);
+    Mime *mime = janet_getabstract(argv, 0, &curl_obj);
+    curl_mimepart *mimepart = curl_mime_addpart(mime->mime);
 
     return mimepart ? mimepart_make(mimepart) : janet_wrap_nil();
 }
@@ -1410,8 +1410,8 @@ static Janet mime_part(int32_t argc, Janet *argv) {
 static Janet mime_subpart(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
 
-    Mime* mime = janet_getabstract(argv, 0, &curl_obj);
-    MimePart* mimepart = janet_getabstract(argv, 1, &curl_obj);
+    Mime *mime = janet_getabstract(argv, 0, &curl_obj);
+    MimePart *mimepart = janet_getabstract(argv, 1, &curl_obj);
 
     if (CURLE_OK == curl_mime_subparts(mimepart->mimepart, mime->mime)) {
         return janet_wrap_true();
@@ -1423,8 +1423,8 @@ static Janet mime_subpart(int32_t argc, Janet *argv) {
 static Janet mime_name(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
 
-    MimePart* mimepart = janet_getabstract(argv, 0, &curl_obj);
-    const char* name = janet_getcstring(argv, 1);
+    MimePart *mimepart = janet_getabstract(argv, 0, &curl_obj);
+    const char *name = janet_getcstring(argv, 1);
 
     if (CURLE_OK == curl_mime_name(mimepart->mimepart, name)) {
         return janet_wrap_true();
@@ -1436,8 +1436,8 @@ static Janet mime_name(int32_t argc, Janet *argv) {
 static Janet mime_type(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
 
-    MimePart* mimepart = janet_getabstract(argv, 0, &curl_obj);
-    const char* type = janet_getcstring(argv, 1);
+    MimePart *mimepart = janet_getabstract(argv, 0, &curl_obj);
+    const char *type = janet_getcstring(argv, 1);
 
     if (CURLE_OK == curl_mime_type(mimepart->mimepart, type)) {
         return janet_wrap_true();
@@ -1449,10 +1449,10 @@ static Janet mime_type(int32_t argc, Janet *argv) {
 static Janet mime_data(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
 
-    MimePart* mimepart = janet_getabstract(argv, 0, &curl_obj);
-    const JanetBuffer* buffer = janet_getbuffer(argv, 1);
+    MimePart *mimepart = janet_getabstract(argv, 0, &curl_obj);
+    const JanetBuffer *buffer = janet_getbuffer(argv, 1);
 
-    if (CURLE_OK == curl_mime_data(mimepart->mimepart, (const char*)buffer->data, buffer->count)) {
+    if (CURLE_OK == curl_mime_data(mimepart->mimepart, (const char *)buffer->data, buffer->count)) {
         return janet_wrap_true();
     }
 
@@ -1462,8 +1462,8 @@ static Janet mime_data(int32_t argc, Janet *argv) {
 static Janet mime_encoder(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
 
-    MimePart* mimepart = janet_getabstract(argv, 0, &curl_obj);
-    const char* encoding = janet_getcstring(argv, 1);
+    MimePart *mimepart = janet_getabstract(argv, 0, &curl_obj);
+    const char *encoding = janet_getcstring(argv, 1);
 
     if (CURLE_OK == curl_mime_encoder(mimepart->mimepart, encoding)) {
         return janet_wrap_true();
@@ -1475,18 +1475,18 @@ static Janet mime_encoder(int32_t argc, Janet *argv) {
 static Janet mime_headers(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
 
-    MimePart* mimepart = janet_getabstract(argv, 0, &curl_obj);
+    MimePart *mimepart = janet_getabstract(argv, 0, &curl_obj);
     JanetView array = janet_getindexed(argv, 1);
 
     if (array.len <= 0) {
         janet_panic("input list cannot be empty");
     }
 
-    const char* str1 = (const char*) janet_unwrap_string(array.items[0]);
-    struct curl_slist* list = curl_slist_append(NULL, str1);
+    const char *str1 = (const char *) janet_unwrap_string(array.items[0]);
+    struct curl_slist *list = curl_slist_append(NULL, str1);
 
     for (int32_t idx = 1; idx < array.len; idx++) {
-        const char* str = (const char*) janet_unwrap_string(array.items[idx]);
+        const char *str = (const char *) janet_unwrap_string(array.items[idx]);
         list = curl_slist_append(list, str);
     }
 
@@ -1501,8 +1501,8 @@ static Janet mime_headers(int32_t argc, Janet *argv) {
 static Janet mime_filename(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
 
-    MimePart* mimepart = janet_getabstract(argv, 0, &curl_obj);
-    const char* filename = janet_getcstring(argv, 1);
+    MimePart *mimepart = janet_getabstract(argv, 0, &curl_obj);
+    const char *filename = janet_getcstring(argv, 1);
 
     if (CURLE_OK == curl_mime_filename(mimepart->mimepart, filename)) {
         return janet_wrap_true();
@@ -1514,8 +1514,8 @@ static Janet mime_filename(int32_t argc, Janet *argv) {
 static Janet mime_filedata(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
 
-    MimePart* mimepart = janet_getabstract(argv, 0, &curl_obj);
-    const char* filename = janet_getcstring(argv, 1);
+    MimePart *mimepart = janet_getabstract(argv, 0, &curl_obj);
+    const char *filename = janet_getcstring(argv, 1);
 
     if (CURLE_OK == curl_mime_filedata(mimepart->mimepart, filename)) {
         return janet_wrap_true();
@@ -1596,7 +1596,7 @@ JANET_MODULE_ENTRY(JanetTable *env) {
     info_gen_dict();
 
     // GENERAL
-    janet_def(env, "version", janet_cstringv(LIBCURL_VERSION),"underlying libcurl value string");
+    janet_def(env, "version", janet_cstringv(LIBCURL_VERSION), "underlying libcurl value string");
 
     // .:ENUMS:.
     // CURLOPT_PROXYTYPE
