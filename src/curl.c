@@ -1129,9 +1129,10 @@ static Janet easy_perform(int32_t argc, Janet *argv) {
   janet_fixarity(argc, 1);
 
   Curl* curl = janet_getabstract(argv, 0, &curl_obj);
-  
-  curl_easy_perform(curl->curl);
-  return janet_wrap_nil();
+
+  CURLcode res;
+  res = curl_easy_perform(curl->curl);
+  return janet_wrap_integer(res);
 }
 
 static Janet easy_query(int32_t argc, Janet *argv) {
