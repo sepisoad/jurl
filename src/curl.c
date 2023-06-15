@@ -460,6 +460,7 @@ static struct  {
     {"tls13-ciphers", {CURLOPT_TLS13_CIPHERS, JANET_STRING}},
     {"proxy-tls13-ciphers", {CURLOPT_PROXY_TLS13_CIPHERS, JANET_STRING}},
     {"doh-url", {CURLOPT_DOH_URL, JANET_STRING}},
+    {"aws-sigv4", {CURLOPT_AWS_SIGV4, JANET_STRING}},
 
     {"verbose?", {CURLOPT_VERBOSE, JANET_BOOLEAN}},
     {"header?", {CURLOPT_HEADER, JANET_BOOLEAN}},
@@ -1862,6 +1863,7 @@ JANET_MODULE_ENTRY(JanetTable *env) {
     janet_def(env, "http-auth-only", janet_wrap_integer(CURLAUTH_ONLY), "//TODO: how to handle this?");
     janet_def(env, "http-auth-any", janet_wrap_integer(CURLAUTH_ANY), "any authentication type");
     janet_def(env, "http-auth-any-safe", janet_wrap_integer(CURLAUTH_ANYSAFE), "any safe authentication type");
+    janet_def(env, "http-auth-aws-sigv4", janet_wrap_integer(CURLAUTH_AWS_SIGV4), "aws sigv4 authentication type");
 
     // CURLOPT_PROXYAUTH
     janet_def(env, "proxy-none", janet_wrap_integer(CURLAUTH_NONE), "none");
