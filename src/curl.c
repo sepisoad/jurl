@@ -461,6 +461,7 @@ static struct  {
     {"proxy-tls13-ciphers", {CURLOPT_PROXY_TLS13_CIPHERS, JANET_STRING}},
     {"doh-url", {CURLOPT_DOH_URL, JANET_STRING}},
     {"aws-sigv4", {CURLOPT_AWS_SIGV4, JANET_STRING}},
+    {"copy-post-fields", {CURLOPT_COPYPOSTFIELDS, JANET_STRING}},
 
     {"verbose?", {CURLOPT_VERBOSE, JANET_BOOLEAN}},
     {"header?", {CURLOPT_HEADER, JANET_BOOLEAN}},
@@ -558,7 +559,7 @@ static struct  {
     {"time-value", {CURLOPT_TIMEVALUE, JANET_NUMBER}},
     {"proxy-port", {CURLOPT_PROXYPORT, JANET_NUMBER}},
     {"post-field-size", {CURLOPT_POSTFIELDSIZE, JANET_NUMBER}},
-    {"post-fields", {CURLOPT_POSTFIELDS, JANET_STRING}},
+    {"post-fields", {CURLOPT_POSTFIELDS, JANET_POINTER}},
     {"max-redirs", {CURLOPT_MAXREDIRS, JANET_NUMBER}},
     {"max-connects", {CURLOPT_MAXCONNECTS, JANET_NUMBER}},
     {"obsolete72", {CURLOPT_OBSOLETE72, JANET_NUMBER}},
@@ -639,8 +640,7 @@ static struct  {
     {"ssl-ctx-data@TODO", {CURLOPT_SSL_CTX_DATA, JANET_POINTER}}, // TODO
     {"ioctl-data@TODO", {CURLOPT_IOCTLDATA, JANET_POINTER}}, // TODO
     {"sockopt-data@TODO", {CURLOPT_SOCKOPTDATA, JANET_POINTER}}, // TODO
-    {"open-socke-tdata@TODO", {CURLOPT_OPENSOCKETDATA, JANET_POINTER}}, // TODO
-    {"copy-post-fields@TODO", {CURLOPT_COPYPOSTFIELDS, JANET_POINTER}}, // TODO
+    {"open-socket-data@TODO", {CURLOPT_OPENSOCKETDATA, JANET_POINTER}}, // TODO
     {"seek-data@TODO", {CURLOPT_SEEKDATA, JANET_POINTER}}, // TODO
     {"ssh-key-data@TODO", {CURLOPT_SSH_KEYDATA, JANET_POINTER}}, // TODO
     {"mail-rcpt@TODO", {CURLOPT_MAIL_RCPT, JANET_POINTER}}, // TODO
